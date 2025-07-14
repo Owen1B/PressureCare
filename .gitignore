@@ -1,0 +1,31 @@
+# ESP-IDF build files
+build/
+sdkconfig
+sdkconfig.old
+
+# Managed components (auto-downloaded)
+managed_components/
+
+# Dependencies lock file (auto-generated)
+dependencies.lock
+
+# Python cache
+__pycache__/
+*.pyc
+
+# VS Code settings
+.vscode/
+
+# macOS files
+.DS_Store
+
+# Backup files
+*.bak
+*.backup
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp

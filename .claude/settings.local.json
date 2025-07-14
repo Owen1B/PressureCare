@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(echo:*)",
+      "Bash(find:*)",
+      "Bash(.:*)",
+      "Bash(source:*)",
+      "Bash(wget:*)",
+      "Bash(curl:*)",
+      "Bash(tar:*)",
+      "Bash(diff:*)",
+      "Bash(cp:*)",
+      "Bash(rm:*)",
+      "Bash(git init:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}
