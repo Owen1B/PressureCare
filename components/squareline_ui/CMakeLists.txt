@@ -1,7 +1,7 @@
 idf_component_register(
     SRCS 
-        "screens/ui_Screen_1_Print1.c"
-        "screens/ui_Screen_2_Move1.c"
+        "screens/ui_Screen_1_Print1.c"  # NPWT therapy main screen
+        "screens/ui_Screen_2_Move1.c"   # NPWT therapy control screen
         "ui.c"
         "components/ui_comp_hook.c"
         "ui_helpers.c"

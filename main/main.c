@@ -13,14 +13,14 @@ void app_main()
     // wavesahre_rgb_lcd_bl_on();  //Turn on the screen backlight 
     // wavesahre_rgb_lcd_bl_off(); //Turn off the screen backlight 
     
-    ESP_LOGI(TAG, "Display SquareLine UI");
+    ESP_LOGI(TAG, "Display NPWT Therapy Device UI");
     // Lock the mutex due to the LVGL APIs are not thread-safe
     if (lvgl_port_lock(-1)) {
-        // Initialize and display your custom SquareLine UI
+        // Initialize and display NPWT therapy device UI
         ui_init();
         
         // Note: LVGL demos have been disabled to save flash space
-        // Only SquareLine UI is available
+        // Only NPWT therapy device UI is available
         
         // Release the mutex
         lvgl_port_unlock();

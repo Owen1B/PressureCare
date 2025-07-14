@@ -19,7 +19,11 @@
       "Bash(python:*)",
       "Bash(/Users/owen/esp/esp-idf/tools/idf.py:*)",
       "Bash(/dev/null)",
-      "Bash(TERM=xterm-256color idf.py menuconfig)"
+      "Bash(TERM=xterm-256color idf.py menuconfig)",
+      "Bash(timeout 10 idf.py:*)",
+      "Bash(gtimeout:*)",
+      "Bash(git checkout:*)",
+      "Bash(git commit:*)"
     ],
     "deny": []
   }
