@@ -24,6 +24,9 @@ esp_err_t npwt_ui_bridge_init(void) {
     npwt_ui_update_main_screen();
     npwt_ui_update_settings_screen();
     
+    // 模拟一次密封检查
+    npwt_seal_check();
+    
     ESP_LOGI(TAG, "UI bridge initialized successfully");
     return ESP_OK;
 }
@@ -67,47 +70,55 @@ void npwt_ui_update_main_screen(void) {
 
 // 更新压力显示
 void npwt_ui_update_pressure_display(int16_t current_pressure) {
-    char pressure_str[16];
-    npwt_ui_format_pressure(current_pressure, pressure_str, sizeof(pressure_str));
+    char pressure_str[32];
+    snprintf(pressure_str, sizeof(pressure_str), "%d", current_pressure);
     
-    // 更新大号压力显示 (需要找到对应的UI元素)
-    // 这里需要根据实际的UI元素名称来更新
-    // 示例：lv_label_set_text(ui_Label_Current_Pressure, pressure_str);
+    // 更新大号压力显示 (使用Label1作为当前压力数值显示)
+    if (ui_Label1) {
+        lv_label_set_text(ui_Label1, pressure_str);
+    }
 }
 
 // 更新设置面板
 void npwt_ui_update_settings_panel(void) {
     npwt_settings_t settings = npwt_get_settings();
     
-    // 更新设定负压
+    // 更新设定负压 (ui_Label_Head_Temp2显示设定压力值)
     char pressure_str[16];
     npwt_ui_format_pressure(settings.target_pressure, pressure_str, sizeof(pressure_str));
+    if (ui_Label_Head_Temp2) {
+        lv_label_set_text(ui_Label_Head_Temp2, pressure_str);
+    }
     
-    // 更新工作模式显示
+    // 更新工作模式显示 (ui_Label_Bed_Temp2显示工作模式)
     const char* mode_str = npwt_ui_get_mode_string(settings.mode);
-    
-    // 需要根据实际的UI元素名称来更新
-    // 示例：
-    // lv_label_set_text(ui_Label_Target_Pressure, pressure_str);
-    // lv_label_set_text(ui_Label_Work_Mode, mode_str);
+    if (ui_Label_Bed_Temp2) {
+        lv_label_set_text(ui_Label_Bed_Temp2, mode_str);
+    }
 }
 
 // 更新密封质量
 void npwt_ui_update_seal_quality(uint8_t quality) {
-    // 更新密封质量进度条
-    // 示例：lv_bar_set_value(ui_Bar_Seal_Quality, quality, LV_ANIM_ON);
+    // 更新密封质量进度条 (ui_Bar1用于显示密封质量)
+    if (ui_Bar1) {
+        lv_bar_set_value(ui_Bar1, quality, LV_ANIM_ON);
+    }
 }
 
 // 更新电源按钮状态
 void npwt_ui_update_power_button(bool power_on) {
-    // 更新电源按钮的视觉状态
-    // 可以改变按钮颜色、透明度等
-    // 示例：
-    // if (power_on) {
-    //     lv_obj_set_style_bg_color(ui_BTN_Power, lv_color_hex(0x00FF00), LV_PART_MAIN);
-    // } else {
-    //     lv_obj_set_style_bg_color(ui_BTN_Power, lv_color_hex(0xFF0000), LV_PART_MAIN);
-    // }
+    // 更新电源按钮的视觉状态 (ui_BTN_Pause_Top1作为总开关)
+    if (ui_BTN_Pause_Top1) {
+        if (power_on) {
+            // 开启时显示绿色
+            lv_obj_set_style_bg_color(ui_BTN_Pause_Top1, lv_color_hex(0x00FF00), LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(ui_BTN_Pause_Top1, 200, LV_PART_MAIN);
+        } else {
+            // 关闭时显示红色
+            lv_obj_set_style_bg_color(ui_BTN_Pause_Top1, lv_color_hex(0xFF0000), LV_PART_MAIN);
+            lv_obj_set_style_bg_opa(ui_BTN_Pause_Top1, 200, LV_PART_MAIN);
+        }
+    }
 }
 
 // 更新设置界面
@@ -124,8 +135,10 @@ void npwt_ui_update_pressure_setting(int16_t pressure) {
     char pressure_str[16];
     npwt_ui_format_pressure(pressure, pressure_str, sizeof(pressure_str));
     
-    // 更新压力设置显示
-    // 示例：lv_label_set_text(ui_Label_Pressure_Setting, pressure_str);
+    // 更新压力设置显示 (ui_Label_Z_Position_Number1显示设定压力)
+    if (ui_Label_Z_Position_Number1) {
+        lv_label_set_text(ui_Label_Z_Position_Number1, pressure_str);
+    }
 }
 
 // 更新工作时间设置
@@ -133,8 +146,10 @@ void npwt_ui_update_work_time_setting(uint8_t minutes) {
     char time_str[16];
     npwt_ui_format_time(minutes, time_str, sizeof(time_str));
     
-    // 更新工作时间显示
-    // 示例：lv_label_set_text(ui_Label_Work_Time_Setting, time_str);
+    // 更新工作时间显示 (ui_Label_X_Position_Number2显示工作时间)
+    if (ui_Label_X_Position_Number2) {
+        lv_label_set_text(ui_Label_X_Position_Number2, time_str);
+    }
 }
 
 // 更新休息时间设置
@@ -142,16 +157,18 @@ void npwt_ui_update_rest_time_setting(uint8_t minutes) {
     char time_str[16];
     npwt_ui_format_time(minutes, time_str, sizeof(time_str));
     
-    // 更新休息时间显示
-    // 示例：lv_label_set_text(ui_Label_Rest_Time_Setting, time_str);
+    // 更新休息时间显示 (ui_Label_Time_7显示休息时间)
+    if (ui_Label_Time_7) {
+        lv_label_set_text(ui_Label_Time_7, time_str);
+    }
 }
 
 // 更新模式设置
 void npwt_ui_update_mode_setting(npwt_mode_t mode) {
-    const char* mode_str = npwt_ui_get_mode_string(mode);
-    
-    // 更新模式显示
-    // 示例：lv_label_set_text(ui_Label_Mode_Setting, mode_str);
+    // 更新模式滚轮选择 (ui_Roller7显示模式选择)
+    if (ui_Roller7) {
+        lv_roller_set_selected(ui_Roller7, mode, LV_ANIM_ON);
+    }
 }
 
 // 事件处理函数

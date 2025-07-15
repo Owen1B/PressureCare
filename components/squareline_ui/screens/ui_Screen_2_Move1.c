@@ -11,6 +11,9 @@ void ui_event_BTN_Menu_Print_S5( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
 
 if ( event_code == LV_EVENT_CLICKED) {
+      // 处理主页按钮点击事件
+      extern void npwt_ui_handle_home_button_clicked(void);
+      npwt_ui_handle_home_button_clicked();
       _ui_screen_change( &ui_Screen_1_Print1, LV_SCR_LOAD_ANIM_FADE_ON, 200, 0, &ui_Screen_1_Print1_screen_init);
 }
 }
@@ -25,6 +28,9 @@ if ( event_code == LV_EVENT_PRESSED) {
 if ( event_code == LV_EVENT_RELEASED) {
       OpaOff_Animation(ui_GLOW_7, 0);
       _ui_state_modify( ui_Arrow_Z_up1, LV_STATE_CHECKED, _UI_MODIFY_STATE_REMOVE);
+      // 压力增加 (减少负压的绝对值)
+      extern void npwt_ui_handle_pressure_adjust(int16_t delta);
+      npwt_ui_handle_pressure_adjust(10);
 }
 if ( event_code == LV_EVENT_PRESS_LOST) {
       OpaOff_Animation(ui_GLOW_7, 0);
@@ -42,6 +48,9 @@ if ( event_code == LV_EVENT_PRESSED) {
 if ( event_code == LV_EVENT_RELEASED) {
       OpaOff_Animation(ui_GLOW_8, 0);
       _ui_state_modify( ui_Arrow_Z_Down1, LV_STATE_CHECKED, _UI_MODIFY_STATE_REMOVE);
+      // 压力减少 (增加负压的绝对值)
+      extern void npwt_ui_handle_pressure_adjust(int16_t delta);
+      npwt_ui_handle_pressure_adjust(-10);
 }
 if ( event_code == LV_EVENT_PRESS_LOST) {
       OpaOff_Animation(ui_GLOW_8, 0);
@@ -59,6 +68,9 @@ if ( event_code == LV_EVENT_PRESSED) {
 if ( event_code == LV_EVENT_RELEASED) {
       OpaOff_Animation(ui_GLOW_9, 0);
       _ui_state_modify( ui_Arrow_Z_up2, LV_STATE_CHECKED, _UI_MODIFY_STATE_REMOVE);
+      // 工作时间增加
+      extern void npwt_ui_handle_work_time_adjust(int8_t delta);
+      npwt_ui_handle_work_time_adjust(1);
 }
 if ( event_code == LV_EVENT_PRESS_LOST) {
       OpaOff_Animation(ui_GLOW_9, 0);
@@ -76,6 +88,9 @@ if ( event_code == LV_EVENT_PRESSED) {
 if ( event_code == LV_EVENT_RELEASED) {
       OpaOff_Animation(ui_GLOW_10, 0);
       _ui_state_modify( ui_Arrow_Z_Down2, LV_STATE_CHECKED, _UI_MODIFY_STATE_REMOVE);
+      // 工作时间减少
+      extern void npwt_ui_handle_work_time_adjust(int8_t delta);
+      npwt_ui_handle_work_time_adjust(-1);
 }
 if ( event_code == LV_EVENT_PRESS_LOST) {
       OpaOff_Animation(ui_GLOW_10, 0);
@@ -93,6 +108,9 @@ if ( event_code == LV_EVENT_PRESSED) {
 if ( event_code == LV_EVENT_RELEASED) {
       OpaOff_Animation(ui_GLOW_11, 0);
       _ui_state_modify( ui_Arrow_Z_up3, LV_STATE_CHECKED, _UI_MODIFY_STATE_REMOVE);
+      // 休息时间增加
+      extern void npwt_ui_handle_rest_time_adjust(int8_t delta);
+      npwt_ui_handle_rest_time_adjust(1);
 }
 if ( event_code == LV_EVENT_PRESS_LOST) {
       OpaOff_Animation(ui_GLOW_11, 0);
@@ -110,10 +128,45 @@ if ( event_code == LV_EVENT_PRESSED) {
 if ( event_code == LV_EVENT_RELEASED) {
       OpaOff_Animation(ui_GLOW_12, 0);
       _ui_state_modify( ui_Arrow_Z_Down3, LV_STATE_CHECKED, _UI_MODIFY_STATE_REMOVE);
+      // 休息时间减少
+      extern void npwt_ui_handle_rest_time_adjust(int8_t delta);
+      npwt_ui_handle_rest_time_adjust(-1);
 }
 if ( event_code == LV_EVENT_PRESS_LOST) {
       OpaOff_Animation(ui_GLOW_12, 0);
       _ui_state_modify( ui_Arrow_Z_Down3, LV_STATE_CHECKED, _UI_MODIFY_STATE_REMOVE);
+}
+}
+
+// 模式滚轮事件处理
+void ui_event_Roller_Mode( lv_event_t * e) {
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+if ( event_code == LV_EVENT_VALUE_CHANGED) {
+      // 模式滚轮值变化
+      lv_obj_t * roller = lv_event_get_target(e);
+      uint16_t selected = lv_roller_get_selected(roller);
+      
+      extern void npwt_ui_handle_mode_switch(void);
+      extern void npwt_ui_handle_pressure_adjust(int16_t delta);
+      extern void npwt_ui_handle_work_time_adjust(int8_t delta);
+      extern void npwt_ui_handle_rest_time_adjust(int8_t delta);
+      
+      // 临时设置模式
+      extern npwt_settings_t temp_settings;
+      temp_settings.mode = selected;
+      extern bool settings_modified;
+      settings_modified = true;
+}
+}
+
+// 保存按钮事件处理
+void ui_event_BTN_Save( lv_event_t * e) {
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+if ( event_code == LV_EVENT_CLICKED) {
+      extern void npwt_ui_handle_save_settings(void);
+      npwt_ui_handle_save_settings();
 }
 }
 
@@ -730,6 +783,8 @@ lv_obj_add_event_cb(ui_GLOW_9, ui_event_GLOW_9, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_GLOW_10, ui_event_GLOW_10, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_GLOW_11, ui_event_GLOW_11, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_GLOW_12, ui_event_GLOW_12, LV_EVENT_ALL, NULL);
+lv_obj_add_event_cb(ui_Roller7, ui_event_Roller_Mode, LV_EVENT_ALL, NULL);
+lv_obj_add_event_cb(ui_BTN_Reset1, ui_event_BTN_Save, LV_EVENT_ALL, NULL);
 
 }
 

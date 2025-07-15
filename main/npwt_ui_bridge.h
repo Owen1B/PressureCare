@@ -48,6 +48,10 @@ const char* npwt_ui_get_state_string(npwt_state_t state);
 void npwt_ui_format_pressure(int16_t pressure, char* buffer, size_t buffer_size);
 void npwt_ui_format_time(uint8_t minutes, char* buffer, size_t buffer_size);
 
+// 临时设置变量 (用于设置界面)
+extern npwt_settings_t temp_settings;
+extern bool settings_modified;
+
 #ifdef __cplusplus
 }
 #endif

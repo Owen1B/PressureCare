@@ -11,7 +11,20 @@ void ui_event_BTN_Menu_Setting_S4( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
 
 if ( event_code == LV_EVENT_CLICKED) {
+      // 处理设置按钮点击事件
+      extern void npwt_ui_handle_settings_button_clicked(void);
+      npwt_ui_handle_settings_button_clicked();
       _ui_screen_change( &ui_Screen_2_Move1, LV_SCR_LOAD_ANIM_FADE_ON, 200, 0, &ui_Screen_2_Move1_screen_init);
+}
+}
+
+// 电源按钮事件处理
+void ui_event_BTN_Power( lv_event_t * e) {
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+if ( event_code == LV_EVENT_CLICKED) {
+      extern void npwt_ui_handle_power_button_clicked(void);
+      npwt_ui_handle_power_button_clicked();
 }
 }
 
@@ -346,6 +359,7 @@ lv_obj_set_style_text_align(ui_Label1, LV_TEXT_ALIGN_AUTO, LV_PART_MAIN| LV_STAT
 lv_obj_set_style_text_font(ui_Label1, &ui_font_big_font, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 lv_obj_add_event_cb(ui_BTN_Menu_Setting_S4, ui_event_BTN_Menu_Setting_S4, LV_EVENT_ALL, NULL);
+lv_obj_add_event_cb(ui_BTN_Pause_Top1, ui_event_BTN_Power, LV_EVENT_ALL, NULL);
 
 }
 
