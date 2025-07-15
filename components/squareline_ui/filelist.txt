@@ -10,7 +10,7 @@ images/ui_img_icn_head_png.c
 images/ui_img_icn_bed_png.c
 images/ui_img_btn_print_down_png.c
 images/ui_img_btn_print_top_off_png.c
-images/ui_img_icn_pause_png.c
+images/ui_img_open_png.c
 images/ui_img_btn_print_png.c
 images/ui_img_btn_z_botton_png.c
 images/ui_img_btn_z_top_png.c

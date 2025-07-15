@@ -8,6 +8,8 @@ This is an ESP-IDF project for ESP32-S3 with LVGL porting. Use the following com
 
 ### Build and Flash
 ```bash
+source ~/esp/esp-idf/export.sh
+
 # Set target (required first time)
 idf.py set-target esp32s3
 
@@ -50,7 +52,7 @@ idf.py fullclean
 ### Key Features
 - **Avoid Tearing**: Three modes available via `EXAMPLE_LVGL_PORT_AVOID_TEAR_MODE`
   - Mode 1: LCD double-buffer & LVGL full-refresh
-  - Mode 2: LCD triple-buffer & LVGL full-refresh  
+  - Mode 2: LCD triple-buffer & LVGL full-refresh
   - Mode 3: LCD double-buffer & LVGL direct-mode (recommended)
 - **Touch Support**: GT911 touch controller with I2C interface
 - **Multiple Demos**: Widgets, music, benchmark, and stress test demos

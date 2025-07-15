@@ -38,7 +38,7 @@ LV_IMG_DECLARE( ui_img_icn_head_png);   // assets/icn_head.png
 LV_IMG_DECLARE( ui_img_icn_bed_png);   // assets/icn_bed.png
 LV_IMG_DECLARE( ui_img_btn_print_down_png);   // assets/btn_print_down.png
 LV_IMG_DECLARE( ui_img_btn_print_top_off_png);   // assets/btn_print_top_off.png
-LV_IMG_DECLARE( ui_img_icn_pause_png);   // assets/icn_pause.png
+LV_IMG_DECLARE( ui_img_open_png);   // assets/open.png
 LV_IMG_DECLARE( ui_img_btn_print_png);   // assets/btn_print.png
 LV_IMG_DECLARE( ui_img_btn_z_botton_png);   // assets/btn_z_botton.png
 LV_IMG_DECLARE( ui_img_btn_z_top_png);   // assets/btn_z_top.png

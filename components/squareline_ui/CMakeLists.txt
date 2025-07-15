@@ -1,5 +1,5 @@
 idf_component_register(
-    SRCS 
+    SRCS
         "screens/ui_Screen_1_Print1.c"  # NPWT therapy main screen
         "screens/ui_Screen_2_Move1.c"   # NPWT therapy control screen
         "ui.c"
@@ -13,6 +13,7 @@ idf_component_register(
         "images/ui_img_btn_print_down_png.c"
         "images/ui_img_btn_print_top_off_png.c"
         "images/ui_img_icn_pause_png.c"
+        "images/ui_img_open_png.c"
         "images/ui_img_btn_print_png.c"
         "images/ui_img_btn_z_botton_png.c"
         "images/ui_img_btn_z_top_png.c"
