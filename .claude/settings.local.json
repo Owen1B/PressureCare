@@ -23,7 +23,9 @@
       "Bash(timeout 10 idf.py:*)",
       "Bash(gtimeout:*)",
       "Bash(git checkout:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }

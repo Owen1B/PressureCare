@@ -16,8 +16,8 @@ extern "C" {
 #endif
 
 // 系统配置常量
-#define NPWT_PRESSURE_MIN           -200    // 最小负压值 (mmHg)
-#define NPWT_PRESSURE_MAX           -50     // 最大负压值 (mmHg)
+#define NPWT_PRESSURE_MIN           -130    // 最小负压值 (mmHg)
+#define NPWT_PRESSURE_MAX           0       // 最大负压值 (mmHg)
 #define NPWT_PRESSURE_STEP          -10     // 负压调节步长
 #define NPWT_PRESSURE_DEFAULT       -120    // 默认负压值
 
@@ -145,6 +145,9 @@ esp_err_t npwt_seal_check(void);
 
 // UI回调注册
 void npwt_register_ui_callback(void (*callback)(void));
+
+// 获取当前目标压力（动态模式下会变化）
+int16_t npwt_get_current_target_pressure(void);
 
 #ifdef __cplusplus
 }

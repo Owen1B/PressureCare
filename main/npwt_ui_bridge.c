@@ -7,8 +7,8 @@
 static const char *TAG = "NPWT_UI_BRIDGE";
 
 // 临时设置变量 (用于设置界面)
-static npwt_settings_t temp_settings;
-static bool settings_modified = false;
+npwt_settings_t temp_settings;
+bool settings_modified = false;
 
 // UI桥接器初始化
 esp_err_t npwt_ui_bridge_init(void) {
@@ -83,9 +83,10 @@ void npwt_ui_update_pressure_display(int16_t current_pressure) {
 void npwt_ui_update_settings_panel(void) {
     npwt_settings_t settings = npwt_get_settings();
     
-    // 更新设定负压 (ui_Label_Head_Temp2显示设定压力值)
+    // 更新当前目标负压 (ui_Label_Head_Temp2显示当前目标压力值，动态模式下会变化)
     char pressure_str[16];
-    npwt_ui_format_pressure(settings.target_pressure, pressure_str, sizeof(pressure_str));
+    int16_t current_target = npwt_get_current_target_pressure();
+    npwt_ui_format_pressure(current_target, pressure_str, sizeof(pressure_str));
     if (ui_Label_Head_Temp2) {
         lv_label_set_text(ui_Label_Head_Temp2, pressure_str);
     }
@@ -108,16 +109,10 @@ void npwt_ui_update_seal_quality(uint8_t quality) {
 // 更新电源按钮状态
 void npwt_ui_update_power_button(bool power_on) {
     // 更新电源按钮的视觉状态 (ui_BTN_Pause_Top1作为总开关)
+    // 不设置颜色，保持原有样式
     if (ui_BTN_Pause_Top1) {
-        if (power_on) {
-            // 开启时显示绿色
-            lv_obj_set_style_bg_color(ui_BTN_Pause_Top1, lv_color_hex(0x00FF00), LV_PART_MAIN);
-            lv_obj_set_style_bg_opa(ui_BTN_Pause_Top1, 200, LV_PART_MAIN);
-        } else {
-            // 关闭时显示红色
-            lv_obj_set_style_bg_color(ui_BTN_Pause_Top1, lv_color_hex(0xFF0000), LV_PART_MAIN);
-            lv_obj_set_style_bg_opa(ui_BTN_Pause_Top1, 200, LV_PART_MAIN);
-        }
+        // 可以考虑其他视觉提示方式，如透明度或边框
+        // 这里暂时保持原样
     }
 }
 
@@ -198,7 +193,9 @@ void npwt_ui_handle_home_button_clicked(void) {
 }
 
 void npwt_ui_handle_pressure_adjust(int16_t delta) {
-    int16_t new_pressure = temp_settings.target_pressure + delta;
+    // 对于负压，+ 按钮应该增加绝对值（更负），- 按钮应该减少绝对值（更正）
+    // 所以需要反转delta的符号
+    int16_t new_pressure = temp_settings.target_pressure - delta;
     
     if (npwt_ui_validate_pressure(new_pressure)) {
         temp_settings.target_pressure = new_pressure;

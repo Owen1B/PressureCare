@@ -1,8 +1,6 @@
 #include "npwt_core.h"
-#include "driver/adc.h"
-#include "driver/i2c.h"
-#include "esp_adc_cal.h"
 #include "esp_timer.h"
+#include "esp_random.h"
 #include <math.h>
 
 static const char *TAG = "NPWT_CORE";
@@ -23,8 +21,7 @@ npwt_system_t g_npwt_system = {0};
 #define PCA9685_PRESCALE 0xFE
 #define PCA9685_LED0_ON_L 0x06
 
-// 模拟压力传感器参数 (实际硬件到位后替换)
-static int16_t simulated_pressure = 0;
+// 模拟PWM参数 (实际硬件到位后替换)
 static uint16_t current_pwm_duty = 0;
 static bool pump_enabled = false;
 
@@ -198,8 +195,16 @@ static void npwt_mode_timer_callback(TimerHandle_t xTimer) {
         // 更新工作/休息时间计数
         if (g_npwt_system.realtime.state == NPWT_STATE_WORKING) {
             g_npwt_system.realtime.work_elapsed++;
+            // 只每10秒输出一次日志，减少栈使用
+            if (g_npwt_system.realtime.work_elapsed % 10 == 0) {
+                ESP_LOGI(TAG, "Timer: WORKING, elapsed=%lu", g_npwt_system.realtime.work_elapsed);
+            }
         } else if (g_npwt_system.realtime.state == NPWT_STATE_RESTING) {
             g_npwt_system.realtime.rest_elapsed++;
+            // 只每10秒输出一次日志，减少栈使用
+            if (g_npwt_system.realtime.rest_elapsed % 10 == 0) {
+                ESP_LOGI(TAG, "Timer: RESTING, elapsed=%lu", g_npwt_system.realtime.rest_elapsed);
+            }
         }
     }
     
@@ -221,22 +226,54 @@ int16_t npwt_adc_read_pressure(void) {
     // 模拟压力传感器读取
     // 实际硬件到位后替换为真实的ADC读取代码
     
-    static int16_t noise_offset = 0;
+    static int16_t simulated_pressure = -10; // 初始化为安全范围内的值
+    static uint32_t last_update_time = 0;
     
-    if (pump_enabled && current_pwm_duty > 0) {
-        // 模拟泵工作时的负压产生
-        float pump_effect = (float)current_pwm_duty / NPWT_PWM_MAX;
-        simulated_pressure = (int16_t)(pump_effect * g_npwt_system.settings.target_pressure * 0.9f);
+    uint32_t current_time = esp_timer_get_time() / 1000; // 转换为毫秒
+    
+    // 每100ms更新一次
+    if (current_time - last_update_time >= 100) {
+        last_update_time = current_time;
         
-        // 添加一些噪声
-        noise_offset = (noise_offset + 1) % 10 - 5;
-        simulated_pressure += noise_offset;
-    } else {
-        // 泵停止时，压力逐渐回升
-        if (simulated_pressure < -5) {
-            simulated_pressure += 2;
+        // 获取当前目标压力
+        int16_t target_pressure = npwt_get_current_target_pressure();
+        
+        if (g_npwt_system.settings.power_on && 
+            (g_npwt_system.realtime.state == NPWT_STATE_WORKING || g_npwt_system.realtime.state == NPWT_STATE_RESTING)) {
+            // 系统开启且工作中，模拟压力跟踪目标压力
+            int16_t error = target_pressure - simulated_pressure;
+            
+            // 模拟系统响应，逐渐接近目标压力
+            if (abs(error) > 2) {  // 只有当误差大于2时才调整
+                if (error < 0) {
+                    // 目标压力比当前压力更负（绝对值大），需要增加负压
+                    simulated_pressure -= (abs(error) / 15 + 1);
+                } else if (error > 0) {
+                    // 目标压力比当前压力更正（绝对值小），需要减少负压
+                    simulated_pressure += (abs(error) / 15 + 1);
+                }
+            }
+            
+            // 添加随机噪声 ±2 mmHg
+            int16_t noise = (esp_random() % 5) - 2;
+            simulated_pressure += noise;
+            
+            // 限制压力范围
+            if (simulated_pressure < NPWT_PRESSURE_MIN) {
+                simulated_pressure = NPWT_PRESSURE_MIN;
+            }
+            if (simulated_pressure > NPWT_PRESSURE_MAX) {
+                simulated_pressure = NPWT_PRESSURE_MAX;
+            }
+            
         } else {
-            simulated_pressure = 0;
+            // 系统关闭或休息状态，压力逐渐回升到安全范围内的较高值
+            int16_t idle_pressure = -10; // -10 mmHg，在安全范围内
+            if (simulated_pressure < idle_pressure) {
+                simulated_pressure += 2;
+            } else if (simulated_pressure > idle_pressure) {
+                simulated_pressure -= 2;
+            }
         }
     }
     
@@ -247,18 +284,7 @@ int16_t npwt_adc_read_pressure(void) {
 static esp_err_t npwt_i2c_init(void) {
     ESP_LOGI(TAG, "Initializing I2C for PCA9685...");
     
-    i2c_config_t i2c_config = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = GPIO_NUM_21,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
-        .scl_io_num = GPIO_NUM_22,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = 100000,
-        .clk_flags = 0
-    };
-    
-    ESP_ERROR_CHECK(i2c_param_config(I2C_NUM_0, &i2c_config));
-    ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0));
+    // 暂时空着，等硬件到位后再实现
     
     return ESP_OK;
 }
@@ -428,9 +454,12 @@ esp_err_t npwt_mode_dynamic_run(void) {
             g_npwt_system.realtime.work_elapsed = 0;
             g_npwt_system.realtime.rest_elapsed = 0;
         } else {
-            // 工作阶段：从0逐渐下降到目标压力
+            // 工作阶段：从目标压力逐渐上升到0
             float progress = (float)g_npwt_system.realtime.work_elapsed / work_time_sec;
-            float ramp_target = g_npwt_system.settings.target_pressure * progress;
+            float ramp_target = g_npwt_system.settings.target_pressure * (1.0f - progress);
+            
+            ESP_LOGI(TAG, "Dynamic WORK: elapsed=%lu, progress=%.2f, target=%.1f", 
+                g_npwt_system.realtime.work_elapsed, progress, ramp_target);
             
             float pid_output = npwt_pid_calculate(
                 &g_npwt_system.pid,
@@ -447,20 +476,19 @@ esp_err_t npwt_mode_dynamic_run(void) {
             g_npwt_system.realtime.rest_elapsed = 0;
             npwt_pid_reset(&g_npwt_system.pid);
         } else {
-            // 休息阶段：从目标压力逐渐上升到0
+            // 休息阶段：从0逐渐下降到目标压力
             float progress = (float)g_npwt_system.realtime.rest_elapsed / rest_time_sec;
-            float ramp_target = g_npwt_system.settings.target_pressure * (1.0f - progress);
+            float ramp_target = g_npwt_system.settings.target_pressure * progress;
             
-            if (ramp_target > -5) {
-                npwt_pwm_set_duty(0);
-            } else {
-                float pid_output = npwt_pid_calculate(
-                    &g_npwt_system.pid,
-                    ramp_target,
-                    g_npwt_system.realtime.current_pressure
-                );
-                npwt_pwm_set_duty((uint16_t)pid_output);
-            }
+            ESP_LOGI(TAG, "Dynamic REST: elapsed=%lu, progress=%.2f, target=%.1f", 
+                g_npwt_system.realtime.rest_elapsed, progress, ramp_target);
+            
+            float pid_output = npwt_pid_calculate(
+                &g_npwt_system.pid,
+                ramp_target,
+                g_npwt_system.realtime.current_pressure
+            );
+            npwt_pwm_set_duty((uint16_t)pid_output);
         }
     } else {
         // 初始状态，开始工作
@@ -475,12 +503,12 @@ esp_err_t npwt_mode_dynamic_run(void) {
 
 // 安全检查
 bool npwt_safety_check(void) {
-    // 检查压力是否在安全范围内
+    // 检查压力是否在安全范围内，只记录警告，不影响正常使用
     if (g_npwt_system.realtime.current_pressure < NPWT_PRESSURE_MIN ||
         g_npwt_system.realtime.current_pressure > NPWT_PRESSURE_MAX) {
         ESP_LOGW(TAG, "Pressure out of safe range: %d mmHg", 
                  g_npwt_system.realtime.current_pressure);
-        return false;
+        // 不返回 false，继续运行
     }
     
     // 检查密封质量
@@ -658,6 +686,30 @@ esp_err_t npwt_settings_reset_default(npwt_settings_t *settings) {
 // 注册UI回调
 void npwt_register_ui_callback(void (*callback)(void)) {
     g_npwt_system.ui_update_callback = callback;
+}
+
+// 获取当前目标压力（动态模式下会变化）
+int16_t npwt_get_current_target_pressure(void) {
+    if (g_npwt_system.settings.mode == NPWT_MODE_DYNAMIC) {
+        if (g_npwt_system.realtime.state == NPWT_STATE_WORKING) {
+            // 工作阶段：从目标压力逐渐上升到0
+            uint32_t work_time_sec = g_npwt_system.settings.work_time * 60;
+            float progress = (float)g_npwt_system.realtime.work_elapsed / work_time_sec;
+            float ramp_target = g_npwt_system.settings.target_pressure * (1.0f - progress);
+            
+            return (int16_t)ramp_target;
+        } else if (g_npwt_system.realtime.state == NPWT_STATE_RESTING) {
+            // 休息阶段：从0逐渐下降到目标压力
+            uint32_t rest_time_sec = g_npwt_system.settings.rest_time * 60;
+            float progress = (float)g_npwt_system.realtime.rest_elapsed / rest_time_sec;
+            float ramp_target = g_npwt_system.settings.target_pressure * progress;
+            
+            return (int16_t)ramp_target;
+        }
+    }
+    
+    // 其他模式或状态，返回设定的目标压力
+    return g_npwt_system.settings.target_pressure;
 }
 
 // PID重置

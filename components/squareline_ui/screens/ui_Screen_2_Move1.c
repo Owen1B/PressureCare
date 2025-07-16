@@ -147,16 +147,10 @@ if ( event_code == LV_EVENT_VALUE_CHANGED) {
       lv_obj_t * roller = lv_event_get_target(e);
       uint16_t selected = lv_roller_get_selected(roller);
       
+      // 调用UI处理函数来设置模式
       extern void npwt_ui_handle_mode_switch(void);
-      extern void npwt_ui_handle_pressure_adjust(int16_t delta);
-      extern void npwt_ui_handle_work_time_adjust(int8_t delta);
-      extern void npwt_ui_handle_rest_time_adjust(int8_t delta);
-      
-      // 临时设置模式
-      extern npwt_settings_t temp_settings;
-      temp_settings.mode = selected;
-      extern bool settings_modified;
-      settings_modified = true;
+      // 这里简单地调用模式切换函数，让它在业务逻辑中处理
+      npwt_ui_handle_mode_switch();
 }
 }
 
