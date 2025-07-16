@@ -21,6 +21,8 @@ images/ui_img_btn_main_on_png.c
 images/ui_img_roller_bg_png.c
 images/ui_img_new_setting_png.c
 fonts/ui_font_Small_Font.c
-fonts/ui_font_big_font.c
 fonts/ui_font_chinese18.c
 fonts/ui_font_chinese24.c
+fonts/ui_font_notosans24.c
+fonts/ui_font_notosans56.c
+fonts/ui_font_notosans150.c

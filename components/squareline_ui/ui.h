@@ -51,9 +51,11 @@ LV_IMG_DECLARE( ui_img_new_setting_png);   // assets/new_setting.png
 
 // FONTS
 LV_FONT_DECLARE( ui_font_Small_Font);
-LV_FONT_DECLARE( ui_font_big_font);
 LV_FONT_DECLARE( ui_font_chinese18);
 LV_FONT_DECLARE( ui_font_chinese24);
+LV_FONT_DECLARE( ui_font_notosans24);
+LV_FONT_DECLARE( ui_font_notosans56);
+LV_FONT_DECLARE( ui_font_notosans150);
 
 // UI INIT
 void ui_init(void);

@@ -146,7 +146,7 @@ if ( event_code == LV_EVENT_VALUE_CHANGED) {
       // 模式滚轮值变化
       lv_obj_t * roller = lv_event_get_target(e);
       uint16_t selected = lv_roller_get_selected(roller);
-      
+
       // 调用UI处理函数来设置模式
       extern void npwt_ui_handle_mode_switch(void);
       // 这里简单地调用模式切换函数，让它在业务逻辑中处理
@@ -292,12 +292,12 @@ ui_Label_Z_Position_Number1 = lv_label_create(ui_DP6);
 lv_obj_set_width( ui_Label_Z_Position_Number1, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_Label_Z_Position_Number1, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_Label_Z_Position_Number1, -2 );
-lv_obj_set_y( ui_Label_Z_Position_Number1, 11 );
+lv_obj_set_y( ui_Label_Z_Position_Number1, 14 );
 lv_obj_set_align( ui_Label_Z_Position_Number1, LV_ALIGN_CENTER );
 lv_label_set_text(ui_Label_Z_Position_Number1,"-120mmHg");
 lv_obj_set_style_text_color(ui_Label_Z_Position_Number1, lv_color_hex(0xDBE6FF), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_Label_Z_Position_Number1, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_text_font(ui_Label_Z_Position_Number1, &lv_font_montserrat_24, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_text_font(ui_Label_Z_Position_Number1, &ui_font_notosans24, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_BTN_Move_Z1 = lv_img_create(ui_S1_Content_Panel4);
 lv_img_set_src(ui_BTN_Move_Z1, &ui_img_btn_z_botton_png);
@@ -707,13 +707,13 @@ lv_obj_set_style_text_font(ui_Label_X_Position2, &ui_font_chinese18, LV_PART_MAI
 ui_Label_X_Position_Number2 = lv_label_create(ui_DP7);
 lv_obj_set_width( ui_Label_X_Position_Number2, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_Label_X_Position_Number2, LV_SIZE_CONTENT);   /// 1
-lv_obj_set_x( ui_Label_X_Position_Number2, 0 );
-lv_obj_set_y( ui_Label_X_Position_Number2, 10 );
+lv_obj_set_x( ui_Label_X_Position_Number2, 1 );
+lv_obj_set_y( ui_Label_X_Position_Number2, 12 );
 lv_obj_set_align( ui_Label_X_Position_Number2, LV_ALIGN_CENTER );
 lv_label_set_text(ui_Label_X_Position_Number2,"5min");
 lv_obj_set_style_text_color(ui_Label_X_Position_Number2, lv_color_hex(0xDBE6FF), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_Label_X_Position_Number2, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_text_font(ui_Label_X_Position_Number2, &lv_font_montserrat_24, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_text_font(ui_Label_X_Position_Number2, &ui_font_notosans24, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_Panel7 = lv_obj_create(ui_Display_Pos_XY2);
 lv_obj_set_width( ui_Panel7, 2);
@@ -754,12 +754,12 @@ ui_Label_Time_7 = lv_label_create(ui_DP4);
 lv_obj_set_width( ui_Label_Time_7, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_Label_Time_7, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_Label_Time_7, 0 );
-lv_obj_set_y( ui_Label_Time_7, 10 );
+lv_obj_set_y( ui_Label_Time_7, 13 );
 lv_obj_set_align( ui_Label_Time_7, LV_ALIGN_CENTER );
 lv_label_set_text(ui_Label_Time_7,"3min");
 lv_obj_set_style_text_color(ui_Label_Time_7, lv_color_hex(0xDBE6FF), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_Label_Time_7, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
-lv_obj_set_style_text_font(ui_Label_Time_7, &lv_font_montserrat_24, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_text_font(ui_Label_Time_7, &ui_font_notosans24, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_BTN_Menu_Print_S8 = lv_img_create(ui_Screen_2_Move1);
 lv_img_set_src(ui_BTN_Menu_Print_S8, &ui_img_new_setting_png);
