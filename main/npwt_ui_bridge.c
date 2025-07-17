@@ -3,6 +3,7 @@
 #include "lvgl_port.h"
 #include <stdio.h>
 #include <string.h>
+#include "esp_timer.h"
 
 static const char *TAG = "NPWT_UI_BRIDGE";
 
@@ -13,34 +14,49 @@ bool settings_modified = false;
 // UI桥接器初始化
 esp_err_t npwt_ui_bridge_init(void) {
     ESP_LOGI(TAG, "Initializing UI bridge...");
-    
+
     // 注册UI更新回调
     npwt_register_ui_callback(npwt_ui_update_callback);
-    
+
     // 初始化临时设置
     temp_settings = npwt_get_settings();
-    
+
     // 初始化UI显示
     npwt_ui_update_main_screen();
     npwt_ui_update_settings_screen();
-    
+
     // 模拟一次密封检查
     npwt_seal_check();
-    
+
     ESP_LOGI(TAG, "UI bridge initialized successfully");
     return ESP_OK;
 }
 
 // UI更新回调函数
+static bool force_ui_update = false;
+
+void npwt_ui_force_update(void) {
+    force_ui_update = true;
+}
+
 void npwt_ui_update_callback(void) {
-    if (lvgl_port_lock(10)) {
-        // 更新主界面
-        npwt_ui_update_main_screen();
+    static uint32_t last_ui_update = 0;
+    uint32_t current_time = esp_timer_get_time() / 1000; // 转换为毫秒
+    
+    // 每1秒更新一次UI显示，或者强制更新
+    if (force_ui_update || (current_time - last_ui_update >= 1000)) {
+        last_ui_update = current_time;
+        force_ui_update = false;
         
-        // 更新设置界面
-        npwt_ui_update_settings_screen();
-        
-        lvgl_port_unlock();
+        if (lvgl_port_lock(10)) {
+            // 更新主界面
+            npwt_ui_update_main_screen();
+
+            // 更新设置界面
+            npwt_ui_update_settings_screen();
+
+            lvgl_port_unlock();
+        }
     }
 }
 
@@ -48,22 +64,22 @@ void npwt_ui_update_callback(void) {
 void npwt_ui_update_main_screen(void) {
     npwt_realtime_t realtime = npwt_get_realtime_data();
     npwt_settings_t settings = npwt_get_settings();
-    
+
     // 更新当前压力显示
     npwt_ui_update_pressure_display(realtime.current_pressure);
-    
+
     // 更新设置面板
     npwt_ui_update_settings_panel();
-    
+
     // 更新密封质量
     npwt_ui_update_seal_quality(realtime.seal_quality);
-    
+
     // 更新电源按钮状态
     npwt_ui_update_power_button(settings.power_on);
-    
+
     // 更新模式显示
     npwt_ui_update_mode_display(settings.mode);
-    
+
     // 更新状态显示
     npwt_ui_update_state_display(realtime.state);
 }
@@ -71,8 +87,14 @@ void npwt_ui_update_main_screen(void) {
 // 更新压力显示
 void npwt_ui_update_pressure_display(int16_t current_pressure) {
     char pressure_str[32];
-    snprintf(pressure_str, sizeof(pressure_str), "%d", current_pressure);
     
+    // 对于传感器测量值，0到-5kPa显示为0
+    if (current_pressure >= -5 && current_pressure <= 0) {
+        snprintf(pressure_str, sizeof(pressure_str), "0");
+    } else {
+        snprintf(pressure_str, sizeof(pressure_str), "%d", current_pressure);
+    }
+
     // 更新大号压力显示 (使用Label1作为当前压力数值显示)
     if (ui_Label1) {
         lv_label_set_text(ui_Label1, pressure_str);
@@ -81,8 +103,9 @@ void npwt_ui_update_pressure_display(int16_t current_pressure) {
 
 // 更新设置面板
 void npwt_ui_update_settings_panel(void) {
-    npwt_settings_t settings = npwt_get_settings();
-    
+    // 优先使用临时设置（如果用户正在修改设置），否则使用系统设置
+    npwt_settings_t settings = settings_modified ? temp_settings : npwt_get_settings();
+
     // 更新当前目标负压 (ui_Label_Head_Temp2显示当前目标压力值，动态模式下会变化)
     char pressure_str[16];
     int16_t current_target = npwt_get_current_target_pressure();
@@ -90,7 +113,7 @@ void npwt_ui_update_settings_panel(void) {
     if (ui_Label_Head_Temp2) {
         lv_label_set_text(ui_Label_Head_Temp2, pressure_str);
     }
-    
+
     // 更新工作模式显示 (ui_Label_Bed_Temp2显示工作模式)
     const char* mode_str = npwt_ui_get_mode_string(settings.mode);
     if (ui_Label_Bed_Temp2) {
@@ -129,7 +152,7 @@ void npwt_ui_update_settings_screen(void) {
 void npwt_ui_update_pressure_setting(int16_t pressure) {
     char pressure_str[16];
     npwt_ui_format_pressure(pressure, pressure_str, sizeof(pressure_str));
-    
+
     // 更新压力设置显示 (ui_Label_Z_Position_Number1显示设定压力)
     if (ui_Label_Z_Position_Number1) {
         lv_label_set_text(ui_Label_Z_Position_Number1, pressure_str);
@@ -140,7 +163,7 @@ void npwt_ui_update_pressure_setting(int16_t pressure) {
 void npwt_ui_update_work_time_setting(uint8_t minutes) {
     char time_str[16];
     npwt_ui_format_time(minutes, time_str, sizeof(time_str));
-    
+
     // 更新工作时间显示 (ui_Label_X_Position_Number2显示工作时间)
     if (ui_Label_X_Position_Number2) {
         lv_label_set_text(ui_Label_X_Position_Number2, time_str);
@@ -151,7 +174,7 @@ void npwt_ui_update_work_time_setting(uint8_t minutes) {
 void npwt_ui_update_rest_time_setting(uint8_t minutes) {
     char time_str[16];
     npwt_ui_format_time(minutes, time_str, sizeof(time_str));
-    
+
     // 更新休息时间显示 (ui_Label_Time_7显示休息时间)
     if (ui_Label_Time_7) {
         lv_label_set_text(ui_Label_Time_7, time_str);
@@ -170,7 +193,7 @@ void npwt_ui_update_mode_setting(npwt_mode_t mode) {
 void npwt_ui_handle_power_button_clicked(void) {
     npwt_settings_t settings = npwt_get_settings();
     npwt_set_power(!settings.power_on);
-    
+
     ESP_LOGI(TAG, "Power button clicked: %s", settings.power_on ? "OFF" : "ON");
 }
 
@@ -178,7 +201,7 @@ void npwt_ui_handle_settings_button_clicked(void) {
     // 进入设置界面时，加载当前设置到临时变量
     temp_settings = npwt_get_settings();
     settings_modified = false;
-    
+
     ESP_LOGI(TAG, "Settings button clicked");
 }
 
@@ -188,7 +211,7 @@ void npwt_ui_handle_home_button_clicked(void) {
         ESP_LOGW(TAG, "Settings modified but not saved");
         // 这里可以添加提示逻辑
     }
-    
+
     ESP_LOGI(TAG, "Home button clicked");
 }
 
@@ -196,24 +219,26 @@ void npwt_ui_handle_pressure_adjust(int16_t delta) {
     // 对于负压，+ 按钮应该增加绝对值（更负），- 按钮应该减少绝对值（更正）
     // 所以需要反转delta的符号
     int16_t new_pressure = temp_settings.target_pressure - delta;
-    
+
     if (npwt_ui_validate_pressure(new_pressure)) {
         temp_settings.target_pressure = new_pressure;
         settings_modified = true;
-        
-        ESP_LOGI(TAG, "Pressure adjusted to: %d mmHg", new_pressure);
+        npwt_ui_force_update(); // 强制立即更新UI
+
+        ESP_LOGI(TAG, "Pressure adjusted to: %d kPa", new_pressure);
     } else {
-        ESP_LOGW(TAG, "Invalid pressure value: %d mmHg", new_pressure);
+        ESP_LOGW(TAG, "Invalid pressure value: %d kPa", new_pressure);
     }
 }
 
 void npwt_ui_handle_work_time_adjust(int8_t delta) {
     int16_t new_time = temp_settings.work_time + delta;
-    
+
     if (npwt_ui_validate_time(new_time)) {
         temp_settings.work_time = new_time;
         settings_modified = true;
-        
+        npwt_ui_force_update(); // 强制立即更新UI
+
         ESP_LOGI(TAG, "Work time adjusted to: %d minutes", new_time);
     } else {
         ESP_LOGW(TAG, "Invalid work time value: %d minutes", new_time);
@@ -222,11 +247,12 @@ void npwt_ui_handle_work_time_adjust(int8_t delta) {
 
 void npwt_ui_handle_rest_time_adjust(int8_t delta) {
     int16_t new_time = temp_settings.rest_time + delta;
-    
+
     if (npwt_ui_validate_time(new_time)) {
         temp_settings.rest_time = new_time;
         settings_modified = true;
-        
+        npwt_ui_force_update(); // 强制立即更新UI
+
         ESP_LOGI(TAG, "Rest time adjusted to: %d minutes", new_time);
     } else {
         ESP_LOGW(TAG, "Invalid rest time value: %d minutes", new_time);
@@ -237,19 +263,22 @@ void npwt_ui_handle_mode_switch(void) {
     // 循环切换模式
     temp_settings.mode = (temp_settings.mode + 1) % 3;
     settings_modified = true;
-    
+    npwt_ui_force_update(); // 强制立即更新UI
+
     ESP_LOGI(TAG, "Mode switched to: %s", npwt_ui_get_mode_string(temp_settings.mode));
 }
 
 void npwt_ui_handle_save_settings(void) {
     esp_err_t err = npwt_settings_save(&temp_settings);
-    
+
     if (err == ESP_OK) {
         // 应用设置到系统
         npwt_set_target_pressure(temp_settings.target_pressure);
         npwt_set_mode(temp_settings.mode);
-        // 工作时间和休息时间在下次启动时生效
-        
+        // 立即应用工作时间和休息时间设置
+        npwt_set_work_time(temp_settings.work_time);
+        npwt_set_rest_time(temp_settings.rest_time);
+
         settings_modified = false;
         ESP_LOGI(TAG, "Settings saved successfully");
     } else {
@@ -299,9 +328,9 @@ const char* npwt_ui_get_state_string(npwt_state_t state) {
 
 void npwt_ui_format_pressure(int16_t pressure, char* buffer, size_t buffer_size) {
     if (pressure == 0) {
-        snprintf(buffer, buffer_size, "0 mmHg");
+        snprintf(buffer, buffer_size, "0 kPa");
     } else {
-        snprintf(buffer, buffer_size, "%d mmHg", pressure);
+        snprintf(buffer, buffer_size, "%d kPa", pressure);
     }
 }
 
@@ -312,17 +341,17 @@ void npwt_ui_format_time(uint8_t minutes, char* buffer, size_t buffer_size) {
 // 模式和状态显示更新
 void npwt_ui_update_mode_display(npwt_mode_t mode) {
     const char* mode_str = npwt_ui_get_mode_string(mode);
-    
+
     // 更新模式显示
     // 示例：lv_label_set_text(ui_Label_Current_Mode, mode_str);
 }
 
 void npwt_ui_update_state_display(npwt_state_t state) {
     const char* state_str = npwt_ui_get_state_string(state);
-    
+
     // 更新状态显示
     // 示例：lv_label_set_text(ui_Label_Current_State, state_str);
-    
+
     // 根据状态改变指示灯颜色
     switch (state) {
         case NPWT_STATE_IDLE:

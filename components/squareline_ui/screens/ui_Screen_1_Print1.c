@@ -174,7 +174,7 @@ lv_obj_set_height( ui_Label_Head_Temp2, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_Label_Head_Temp2, 11 );
 lv_obj_set_y( ui_Label_Head_Temp2, -9 );
 lv_obj_set_align( ui_Label_Head_Temp2, LV_ALIGN_CENTER );
-lv_label_set_text(ui_Label_Head_Temp2,"-120mmHg");
+lv_label_set_text(ui_Label_Head_Temp2,"-16kPa");
 lv_obj_set_style_text_color(ui_Label_Head_Temp2, lv_color_hex(0xDBE6FF), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_Label_Head_Temp2, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_text_font(ui_Label_Head_Temp2, &ui_font_notosans24, LV_PART_MAIN| LV_STATE_DEFAULT);
@@ -341,7 +341,7 @@ lv_obj_set_height( ui_Label2, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_Label2, 214 );
 lv_obj_set_y( ui_Label2, -54 );
 lv_obj_set_align( ui_Label2, LV_ALIGN_CENTER );
-lv_label_set_text(ui_Label2,"mmHg");
+lv_label_set_text(ui_Label2,"kPa");
 lv_obj_set_style_text_color(ui_Label2, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_Label2, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_text_font(ui_Label2, &ui_font_notosans56, LV_PART_MAIN| LV_STATE_DEFAULT);
@@ -352,7 +352,7 @@ lv_obj_set_height( ui_Label1, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_Label1, -72 );
 lv_obj_set_y( ui_Label1, -64 );
 lv_obj_set_align( ui_Label1, LV_ALIGN_CENTER );
-lv_label_set_text(ui_Label1,"-110");
+lv_label_set_text(ui_Label1,"-15");
 lv_obj_set_style_text_color(ui_Label1, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_Label1, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_text_align(ui_Label1, LV_TEXT_ALIGN_RIGHT, LV_PART_MAIN| LV_STATE_DEFAULT);

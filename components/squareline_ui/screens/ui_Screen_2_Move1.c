@@ -30,7 +30,7 @@ if ( event_code == LV_EVENT_RELEASED) {
       _ui_state_modify( ui_Arrow_Z_up1, LV_STATE_CHECKED, _UI_MODIFY_STATE_REMOVE);
       // 压力增加 (减少负压的绝对值)
       extern void npwt_ui_handle_pressure_adjust(int16_t delta);
-      npwt_ui_handle_pressure_adjust(10);
+      npwt_ui_handle_pressure_adjust(1);
 }
 if ( event_code == LV_EVENT_PRESS_LOST) {
       OpaOff_Animation(ui_GLOW_7, 0);
@@ -50,7 +50,7 @@ if ( event_code == LV_EVENT_RELEASED) {
       _ui_state_modify( ui_Arrow_Z_Down1, LV_STATE_CHECKED, _UI_MODIFY_STATE_REMOVE);
       // 压力减少 (增加负压的绝对值)
       extern void npwt_ui_handle_pressure_adjust(int16_t delta);
-      npwt_ui_handle_pressure_adjust(-10);
+      npwt_ui_handle_pressure_adjust(-1);
 }
 if ( event_code == LV_EVENT_PRESS_LOST) {
       OpaOff_Animation(ui_GLOW_8, 0);
@@ -294,7 +294,7 @@ lv_obj_set_height( ui_Label_Z_Position_Number1, LV_SIZE_CONTENT);   /// 1
 lv_obj_set_x( ui_Label_Z_Position_Number1, -2 );
 lv_obj_set_y( ui_Label_Z_Position_Number1, 14 );
 lv_obj_set_align( ui_Label_Z_Position_Number1, LV_ALIGN_CENTER );
-lv_label_set_text(ui_Label_Z_Position_Number1,"-120mmHg");
+lv_label_set_text(ui_Label_Z_Position_Number1,"-16kPa");
 lv_obj_set_style_text_color(ui_Label_Z_Position_Number1, lv_color_hex(0xDBE6FF), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_Label_Z_Position_Number1, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_text_font(ui_Label_Z_Position_Number1, &ui_font_notosans24, LV_PART_MAIN| LV_STATE_DEFAULT);

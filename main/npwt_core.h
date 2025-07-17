@@ -16,10 +16,10 @@ extern "C" {
 #endif
 
 // 系统配置常量
-#define NPWT_PRESSURE_MIN           -130    // 最小负压值 (mmHg)
-#define NPWT_PRESSURE_MAX           0       // 最大负压值 (mmHg)
-#define NPWT_PRESSURE_STEP          -10     // 负压调节步长
-#define NPWT_PRESSURE_DEFAULT       -120    // 默认负压值
+#define NPWT_PRESSURE_MIN           -70     // 最小负压值 (kPa)
+#define NPWT_PRESSURE_MAX           0       // 最大负压值 (kPa)
+#define NPWT_PRESSURE_STEP          -1      // 负压调节步长 (kPa)
+#define NPWT_PRESSURE_DEFAULT       -16     // 默认负压值 (kPa, 约-120mmHg)
 
 #define NPWT_TIME_MIN               1       // 最小时间 (分钟)
 #define NPWT_TIME_MAX               60      // 最大时间 (分钟)
@@ -33,7 +33,7 @@ extern "C" {
 // 工作模式枚举
 typedef enum {
     NPWT_MODE_CONTINUOUS = 0,   // 持续模式
-    NPWT_MODE_INTERMITTENT,     // 间歇模式 
+    NPWT_MODE_INTERMITTENT,     // 间歇模式
     NPWT_MODE_DYNAMIC          // 动态模式
 } npwt_mode_t;
 
@@ -48,7 +48,7 @@ typedef enum {
 
 // 系统参数结构体
 typedef struct {
-    int16_t target_pressure;    // 目标负压值 (mmHg)
+    int16_t target_pressure;    // 目标负压值 (kPa)
     uint8_t work_time;          // 工作时间 (分钟)
     uint8_t rest_time;          // 休息时间 (分钟)
     npwt_mode_t mode;           // 工作模式
@@ -57,7 +57,7 @@ typedef struct {
 
 // 系统实时数据结构体
 typedef struct {
-    int16_t current_pressure;   // 当前负压值 (mmHg)
+    int16_t current_pressure;   // 当前负压值 (kPa)
     uint16_t pump_pwm;          // 泵PWM值
     uint8_t seal_quality;       // 密封质量 (0-100%)
     uint32_t work_elapsed;      // 工作时间已过 (秒)
@@ -75,22 +75,33 @@ typedef struct {
     uint32_t last_time;         // 上次计算时间
 } npwt_pid_t;
 
+// 卡尔曼滤波器结构体
+typedef struct {
+    float x;                    // 状态估计值
+    float P;                    // 估计协方差
+    float Q;                    // 过程噪声协方差
+    float R;                    // 测量噪声协方差
+    float K;                    // 卡尔曼增益
+    bool initialized;           // 是否已初始化
+} npwt_kalman_t;
+
 // 系统主控制结构体
 typedef struct {
     npwt_settings_t settings;   // 系统设置
     npwt_realtime_t realtime;   // 实时数据
     npwt_pid_t pid;             // PID控制器
-    
+    npwt_kalman_t pressure_kalman; // 压力传感器卡尔曼滤波器
+
     // FreeRTOS对象
     TaskHandle_t control_task;  // 控制任务句柄
     TimerHandle_t mode_timer;   // 模式切换定时器
     SemaphoreHandle_t data_mutex; // 数据保护互斥量
-    
+
     // 硬件相关
     bool hardware_ready;        // 硬件就绪状态
     uint32_t adc_channel;       // ADC通道
     uint8_t pca9685_address;    // PCA9685 I2C地址
-    
+
     // 回调函数
     void (*ui_update_callback)(void); // UI更新回调
 } npwt_system_t;
@@ -133,6 +144,10 @@ esp_err_t npwt_pwm_set_duty(uint16_t duty);
 esp_err_t npwt_pid_init(npwt_pid_t *pid);
 float npwt_pid_calculate(npwt_pid_t *pid, float setpoint, float input);
 void npwt_pid_reset(npwt_pid_t *pid);
+
+// 卡尔曼滤波器
+esp_err_t npwt_kalman_init(npwt_kalman_t *kalman, float Q, float R, float initial_estimate);
+float npwt_kalman_update(npwt_kalman_t *kalman, float measurement);
 
 // 工作模式控制
 esp_err_t npwt_mode_continuous_run(void);

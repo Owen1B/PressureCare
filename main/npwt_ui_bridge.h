@@ -13,6 +13,7 @@ esp_err_t npwt_ui_bridge_init(void);
 
 // UI更新回调函数
 void npwt_ui_update_callback(void);
+void npwt_ui_force_update(void);
 
 // 界面1 - 主治疗界面相关函数
 void npwt_ui_update_main_screen(void);

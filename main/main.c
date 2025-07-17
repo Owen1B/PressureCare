@@ -8,6 +8,8 @@
 #include "ui.h"
 #include "npwt_core.h"
 #include "npwt_ui_bridge.h"
+#include "esp_log.h"
+
 
 void app_main()
 {
