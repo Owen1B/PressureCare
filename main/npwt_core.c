@@ -79,13 +79,13 @@ esp_err_t npwt_system_init(void) {
 
     // 初始化硬件
     ESP_ERROR_CHECK(npwt_adc_init());
-    
+
     // 初始化I2C和PCA9685 (允许失败，以便没有硬件时也能运行)
     esp_err_t i2c_ret = npwt_pca9685_init();
     if (i2c_ret != ESP_OK) {
         ESP_LOGW(TAG, "PCA9685 initialization failed, PWM will use simulation mode: %s", esp_err_to_name(i2c_ret));
     }
-    
+
     ESP_ERROR_CHECK(npwt_pwm_init());
 
     // 初始化实时数据
@@ -175,7 +175,7 @@ static void npwt_control_task(void *pvParameters) {
     while (1) {
         heartbeat_count++;
         if (heartbeat_count % 20 == 0) {  // 每2秒输出一次心跳
-            ESP_LOGI(TAG, "Control task heartbeat: %lu, power=%s", 
+            ESP_LOGI(TAG, "Control task heartbeat: %lu, power=%s",
                      heartbeat_count, g_npwt_system.settings.power_on ? "ON" : "OFF");
         }
         xSemaphoreTake(g_npwt_system.data_mutex, portMAX_DELAY);
@@ -193,7 +193,7 @@ static void npwt_control_task(void *pvParameters) {
             static uint32_t last_control_debug = 0;
             if (current_time - last_control_debug >= 2000) {
                 last_control_debug = current_time;
-                ESP_LOGI(TAG, "Control Task: power=ON, mode=%d, state=%d, pressure=%d", 
+                ESP_LOGI(TAG, "Control Task: power=ON, mode=%d, state=%d, pressure=%d",
                          g_npwt_system.settings.mode, g_npwt_system.realtime.state, g_npwt_system.realtime.current_pressure);
             }
 
@@ -221,19 +221,19 @@ static void npwt_control_task(void *pvParameters) {
             npwt_pwm_set_duty(4095);   // 100%占空比 = 泵停止
             g_npwt_system.realtime.state = NPWT_STATE_IDLE;
             // pump_pwm会在npwt_pwm_set_duty()中自动更新
-            
+
             // 调试：确认系统关闭状态
             static uint32_t last_off_debug = 0;
             uint32_t current_time = esp_timer_get_time() / 1000;
             if (current_time - last_off_debug >= 2000) {
                 last_off_debug = current_time;
-                ESP_LOGI(TAG, "Control Task: power=OFF, state=IDLE, PWM=100%%");
+                ESP_LOGI(TAG, "Control Task: power=OFF, state=IDLE, PWM=100%% (SYSTEM IS POWERED OFF!)");
             }
         }
 
         // 更新流量分析和密封性检测
         npwt_update_flow_analysis();
-        
+
         // 更新密封检查
         npwt_seal_check();
 
@@ -355,7 +355,7 @@ int16_t npwt_adc_read_pressure(void) {
 
     int adc_raw = 0;
     int voltage_mv = 0;
-    
+
     // 读取原始ADC值
     esp_err_t ret = adc_oneshot_read(adc_handle, NPWT_ADC_CHANNEL, &adc_raw);
     if (ret != ESP_OK) {
@@ -376,23 +376,23 @@ int16_t npwt_adc_read_pressure(void) {
     }
 
     // 计算相对压力（以当前大气压为零点）
-    
+
     // === 旧传感器参数 (已保存) ===
     // 第二个传感器: 大气压800mV, 计算系数0.16
     // float relative_pressure_kpa = (voltage_mv - 800) * 0.16f;
-    
+
     // === 第一个传感器参数 (当前使用) ===
     // 大气压时电压: 480mV, -98kPa时2500mV
     // 斜率 = -98kPa / (2500mV - 480mV) = -98 / 2020 = -0.0485 kPa/mV
     // 为了达到-100kPa范围，稍微调整系数: -0.0495 kPa/mV
     float relative_pressure_kpa = (voltage_mv - NPWT_ZERO_POINT_VOLTAGE) * (-0.0495f);
-    
+
     // 使用卡尔曼滤波平滑压力值
     float filtered_pressure_kpa = npwt_kalman_update(&g_npwt_system.pressure_kalman, relative_pressure_kpa);
-    
+
     // 四舍五入到最接近的1kPa
     int16_t rounded_pressure = (int16_t)(filtered_pressure_kpa + (filtered_pressure_kpa >= 0 ? 0.5f : -0.5f));
-    
+
     // 限制压力范围
     if (rounded_pressure < NPWT_PRESSURE_MIN) {
         rounded_pressure = NPWT_PRESSURE_MIN;
@@ -403,11 +403,11 @@ int16_t npwt_adc_read_pressure(void) {
 
     static uint32_t last_log_time = 0;
     uint32_t current_time = esp_timer_get_time() / 1000; // 转换为毫秒
-    
+
     // 每1秒输出一次日志
     if (current_time - last_log_time >= 1000) {
         last_log_time = current_time;
-        ESP_LOGI(TAG, "Raw: %.2f kPa, Filtered: %.2f kPa, Rounded: %d kPa", 
+        ESP_LOGI(TAG, "Raw: %.2f kPa, Filtered: %.2f kPa, Rounded: %d kPa",
                  relative_pressure_kpa, filtered_pressure_kpa, rounded_pressure);
     }
 
@@ -453,9 +453,9 @@ esp_err_t npwt_pid_init(npwt_pid_t *pid) {
     if (!pid) return ESP_ERR_INVALID_ARG;
 
     // PID参数 - 反向PWM控制（100%=停止，60%=最快）
-    pid->kp = 50.0f;    // 正值，误差为负时输出正值
-    pid->ki = 2.0f;     // 正值，消除稳态误差
-    pid->kd = 1.0f;     // 正值，减少震荡
+    pid->kp = 10.0f;    // 降低比例系数，减少响应速度
+    pid->ki = 0.5f;     // 降低积分系数，减少积分累积
+    pid->kd = 0.2f;     // 降低微分系数，减少震荡
 
     pid->integral = 0.0f;
     pid->prev_error = 0.0f;
@@ -507,9 +507,9 @@ float npwt_pid_calculate(npwt_pid_t *pid, float setpoint, float input) {
     static uint32_t last_debug_time = 0;
     if (current_time - last_debug_time >= 2000) {
         last_debug_time = current_time;
-        ESP_LOGI(TAG, "PID Debug: setpoint=%.1f, input=%.1f, error=%.1f, dt=%.3f, pid_out=%.1f", 
+        ESP_LOGI(TAG, "PID Debug: setpoint=%.1f, input=%.1f, error=%.1f, dt=%.3f, pid_out=%.1f",
                  setpoint, input, error, dt, output);
-        ESP_LOGI(TAG, "PID Terms: P=%.1f, I=%.1f, D=%.1f", 
+        ESP_LOGI(TAG, "PID Terms: P=%.1f, I=%.1f, D=%.1f",
                  pid->kp * error, pid->ki * pid->integral, pid->kd * derivative);
     }
 
@@ -519,60 +519,42 @@ float npwt_pid_calculate(npwt_pid_t *pid, float setpoint, float input) {
     return output;
 }
 
-// PWM测试模式重置函数
+// PWM测试模式重置函数（保留用于其他测试）
 static uint32_t pwm_test_start_time = 0;
 
 void npwt_reset_pwm_test_mode(void) {
     pwm_test_start_time = 0;
 }
 
-// 持续模式运行 - 测试模式：PWM占空比循环变化
+// 持续模式运行
 esp_err_t npwt_mode_continuous_run(void) {
     g_npwt_system.realtime.state = NPWT_STATE_WORKING;
 
-    // 获取当前时间（毫秒）
-    uint32_t current_time = esp_timer_get_time() / 1000;
-    
-    // 初始化起始时间
-    if (pwm_test_start_time == 0) {
-        pwm_test_start_time = current_time;
-        ESP_LOGI(TAG, "PWM Test Mode Started - 10s cycle (100%% to 60%% to 100%%)");
-    }
-    
-    // 计算周期位置（10秒周期）
-    uint32_t cycle_time = 10000; // 10秒
-    uint32_t elapsed_time = current_time - pwm_test_start_time;
-    uint32_t cycle_position = elapsed_time % cycle_time;
-    
-    // 计算PWM占空比
-    uint16_t pwm_duty;
-    float duty_percentage;
-    
-    // 前5秒：100% -> 60%
-    if (cycle_position <= 5000) {
-        duty_percentage = 100.0f - (cycle_position / 5000.0f) * 40.0f; // 100% -> 60%
-    }
-    // 后5秒：60% -> 100%
-    else {
-        duty_percentage = 60.0f + ((cycle_position - 5000) / 5000.0f) * 40.0f; // 60% -> 100%
-    }
-    
-    // 转换为PWM值 (0-4095)
-    pwm_duty = (uint16_t)(duty_percentage * 4095.0f / 100.0f);
-    
-    // 限制在范围内
-    if (pwm_duty > 4095) pwm_duty = 4095;
-    if (pwm_duty < 2457) pwm_duty = 2457;
-    
-    npwt_pwm_set_duty(pwm_duty);
-    
-    // 每2秒打印一次状态
+    // 添加调试信息
     static uint32_t last_debug_time = 0;
+    uint32_t current_time = esp_timer_get_time() / 1000;
+
     if (current_time - last_debug_time >= 2000) {
         last_debug_time = current_time;
-        ESP_LOGI(TAG, "PWM Test: time=%lu ms, cycle_pos=%lu ms, duty=%.1f%%, pwm=%d", 
-                 elapsed_time, cycle_position, duty_percentage, pwm_duty);
+        ESP_LOGI(TAG, "Continuous Mode: target=%d, current=%d",
+                 g_npwt_system.settings.target_pressure,
+                 g_npwt_system.realtime.current_pressure);
     }
+
+    // 使用PID控制器调节泵速
+    float pid_output = npwt_pid_calculate(
+        &g_npwt_system.pid,
+        g_npwt_system.settings.target_pressure,
+        g_npwt_system.realtime.current_pressure
+    );
+
+    // 反向PWM控制（100%占空比=泵停止，0%占空比=泵最快）
+    uint16_t pwm_duty = 4095 - (uint16_t)pid_output;
+    if (pwm_duty > 4095) pwm_duty = 4095;  // 最大100%（泵停止）
+    if (pwm_duty < 2457) pwm_duty = 2457;  // 最小60%（泵最快，安全限制）
+
+    ESP_LOGI(TAG, "PID output: %.2f, PWM duty: %d (%.1f%%)", pid_output, pwm_duty, (pwm_duty * 100.0f) / 4095.0f);
+    npwt_pwm_set_duty(pwm_duty);
 
     return ESP_OK;
 }
@@ -815,9 +797,9 @@ esp_err_t npwt_set_power(bool power_on) {
         g_npwt_system.realtime.state = NPWT_STATE_IDLE;
         g_npwt_system.realtime.work_elapsed = 0;
         g_npwt_system.realtime.rest_elapsed = 0;
-        g_npwt_system.realtime.pump_pwm = 4095;  // 初始为100%占空比
+        g_npwt_system.realtime.pump_pwm = 0;  // 初始为0，等待PID控制
         npwt_reset_pwm_test_mode();  // 重置PWM测试模式
-        ESP_LOGI(TAG, "System started, PWM test mode will begin");
+        ESP_LOGI(TAG, "System started, PID control will begin");
     }
 
     xSemaphoreGive(g_npwt_system.data_mutex);
@@ -879,7 +861,7 @@ esp_err_t npwt_settings_load(npwt_settings_t *settings) {
     err = nvs_get_blob(nvs_handle, NVS_KEY_MODE, &settings->mode, &required_size);
     if (err != ESP_OK) settings->mode = NPWT_MODE_CONTINUOUS;
 
-    settings->power_on = true; // 开机默认开启 (调试模式)
+    settings->power_on = false; // 开机默认关闭
 
     nvs_close(nvs_handle);
 
@@ -1084,7 +1066,7 @@ esp_err_t npwt_system_deinit(void) {
 // 根据基准性能曲线计算理论流量（100%功率下）
 float npwt_calculate_theoretical_flow(float pressure_kpa) {
     float abs_pressure = fabsf(pressure_kpa);
-    
+
     if (abs_pressure >= 77.0f) {
         return 0.0f;  // 超过最大真空
     } else if (abs_pressure >= 5.0f) {
@@ -1102,11 +1084,11 @@ float npwt_calculate_theoretical_flow(float pressure_kpa) {
 float npwt_calculate_actual_flow(float pressure_kpa, uint16_t pwm_duty) {
     // 1. 从基准曲线(100%功率)查找理论最大流量
     float max_flow_at_pressure = npwt_calculate_theoretical_flow(pressure_kpa);
-    
+
     // 2. 根据PWM占空比线性缩放
     float pwm_ratio = (float)pwm_duty / 4095.0f;
     float actual_flow = max_flow_at_pressure * pwm_ratio;
-    
+
     return actual_flow;
 }
 
@@ -1121,16 +1103,16 @@ uint8_t npwt_flow_to_bar_percentage(float flow_lpm) {
 void npwt_update_flow_analysis(void) {
     float current_pressure = (float)g_npwt_system.realtime.current_pressure;
     uint16_t pwm_duty = g_npwt_system.realtime.pump_pwm;
-    
+
     // 计算实际流量
     float actual_flow = npwt_calculate_actual_flow(current_pressure, pwm_duty);
     g_npwt_system.realtime.actual_flow = actual_flow;
-    
+
     // 计算漏气流量（在稳态时，实际流量主要用于补偿漏气）
     // 假设正常密封时需要0.5L/min维持压力
     float normal_maintenance_flow = 0.5f;
     g_npwt_system.realtime.leakage_flow = fmaxf(0.0f, actual_flow - normal_maintenance_flow);
-    
+
     // 基于漏气流量更新密封质量
     float leakage = g_npwt_system.realtime.leakage_flow;
     if (leakage < 1.0f) {
@@ -1144,8 +1126,8 @@ void npwt_update_flow_analysis(void) {
     } else {
         g_npwt_system.realtime.seal_quality = 20;   // 很差
     }
-    
-    ESP_LOGD(TAG, "Flow analysis - Actual: %.1f L/min, Leakage: %.1f L/min, Seal: %d%%", 
+
+    ESP_LOGD(TAG, "Flow analysis - Actual: %.1f L/min, Leakage: %.1f L/min, Seal: %d%%",
              actual_flow, leakage, g_npwt_system.realtime.seal_quality);
 }
 
@@ -1156,7 +1138,7 @@ esp_err_t npwt_i2c_init(void) {
     if (g_npwt_system.i2c_initialized) {
         return ESP_OK; // 已经初始化
     }
-    
+
     // 注意：I2C总线已由触摸屏系统初始化，这里只是标记为已初始化
     // 实际的I2C通信将使用触摸屏的I2C_NUM_0端口
     g_npwt_system.i2c_initialized = true;
@@ -1167,50 +1149,50 @@ esp_err_t npwt_i2c_init(void) {
 // 初始化PCA9685 - 使用共享I2C总线
 esp_err_t npwt_pca9685_init(void) {
     esp_err_t ret;
-    
+
     // 确保I2C已初始化
     ret = npwt_i2c_init();
     if (ret != ESP_OK) {
         return ret;
     }
-    
+
     // 使用共享的I2C端口直接通信
-    
+
     // Step 1: 复位PCA9685 (参考Arduino代码)
-    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR, 
-                                     (uint8_t[]){0x00, 0x00}, 2, 
+    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR,
+                                     (uint8_t[]){0x00, 0x00}, 2,
                                      NPWT_I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "PCA9685 reset failed (device might not be connected): %s", esp_err_to_name(ret));
         // 继续运行，只是没有硬件PWM控制
         return ESP_OK; // 不返回错误，允许程序继续运行
     }
-    
+
     vTaskDelay(pdMS_TO_TICKS(10)); // 等待复位完成
-    
-    // Step 2: 设置PWM频率为100Hz (调试用)
-    uint16_t pwm_frequency = 100;
+
+    // Step 2: 设置PWM频率为20kHz (静音运行)
+    uint16_t pwm_frequency = 20000;
     ret = npwt_pca9685_set_frequency(pwm_frequency);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to set PWM frequency: %s", esp_err_to_name(ret));
     }
-    
+
     // Step 3: 设置MODE2寄存器 (参考Arduino代码)
-    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR, 
-                                     (uint8_t[]){0x01, 0x04}, 2, 
+    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR,
+                                     (uint8_t[]){0x01, 0x04}, 2,
                                      NPWT_I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to set MODE2: %s", esp_err_to_name(ret));
     }
-    
+
     // Step 4: 设置MODE1寄存器启用自动增量 (参考Arduino代码)
-    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR, 
-                                     (uint8_t[]){0x00, 0x80}, 2, 
+    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR,
+                                     (uint8_t[]){0x00, 0x80}, 2,
                                      NPWT_I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to set MODE1: %s", esp_err_to_name(ret));
     }
-    
+
     ESP_LOGI(TAG, "PCA9685 initialized using shared I2C (addr: 0x%02X)", NPWT_PCA9685_ADDR);
     return ESP_OK;
 }
@@ -1221,46 +1203,46 @@ esp_err_t npwt_pca9685_set_pwm(uint8_t channel, uint16_t duty) {
         ESP_LOGE(TAG, "Invalid PWM channel: %d", channel);
         return ESP_ERR_INVALID_ARG;
     }
-    
+
     if (duty > 4095) {
         duty = 4095; // 限制最大值
     }
-    
+
     // PCA9685每个通道有4个寄存器：LEDn_ON_L, LEDn_ON_H, LEDn_OFF_L, LEDn_OFF_H
     uint8_t reg_base = 0x06 + 4 * channel; // 通道寄存器基地址
     uint16_t on_value = 0;     // 从0开始 (参考Arduino代码)
     uint16_t off_value = duty; // 占空比值 (参考Arduino代码)
-    
+
     // 分别写入4个寄存器 (参考Arduino代码逻辑)
     esp_err_t ret;
-    
+
     // 写入LEDn_ON_L
-    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR, 
-                                     (uint8_t[]){reg_base, on_value & 0xFF}, 2, 
+    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR,
+                                     (uint8_t[]){reg_base, on_value & 0xFF}, 2,
                                      NPWT_I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     if (ret != ESP_OK) return ret;
-    
+
     // 写入LEDn_ON_H
-    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR, 
-                                     (uint8_t[]){reg_base + 1, on_value >> 8}, 2, 
+    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR,
+                                     (uint8_t[]){reg_base + 1, on_value >> 8}, 2,
                                      NPWT_I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     if (ret != ESP_OK) return ret;
-    
+
     // 写入LEDn_OFF_L
-    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR, 
-                                     (uint8_t[]){reg_base + 2, off_value & 0xFF}, 2, 
+    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR,
+                                     (uint8_t[]){reg_base + 2, off_value & 0xFF}, 2,
                                      NPWT_I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     if (ret != ESP_OK) return ret;
-    
+
     // 写入LEDn_OFF_H
-    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR, 
-                                     (uint8_t[]){reg_base + 3, off_value >> 8}, 2, 
+    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR,
+                                     (uint8_t[]){reg_base + 3, off_value >> 8}, 2,
                                      NPWT_I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to set PWM channel %d (device might not be connected): %s", channel, esp_err_to_name(ret));
         return ret;
     }
-    
+
     ESP_LOGI(TAG, "PWM channel %d set to duty: %d (0x%03X)", channel, duty, duty);
     return ESP_OK;
 }
@@ -1271,72 +1253,72 @@ esp_err_t npwt_pca9685_set_frequency(uint16_t frequency_hz) {
         ESP_LOGE(TAG, "I2C not initialized!");
         return ESP_ERR_INVALID_STATE;
     }
-    
+
     // 限制频率范围：40Hz - 20000Hz (prescale 0-152)
     if (frequency_hz < 40 || frequency_hz > 20000) {
         ESP_LOGE(TAG, "Frequency %d Hz out of range (40-20000 Hz)", frequency_hz);
         return ESP_ERR_INVALID_ARG;
     }
-    
+
     // 计算prescale值：PRE_SCALE = round(25MHz / (4096 * freq)) - 1
     uint8_t prescale = (uint8_t)(25000000.0f / (4096.0f * frequency_hz) - 1 + 0.5f);
-    
+
     ESP_LOGI(TAG, "Setting PWM frequency to %d Hz (prescale=%d)", frequency_hz, prescale);
-    
+
     // 参考Arduino代码的频率设置逻辑
     // 1. 读取当前MODE1寄存器值
     uint8_t read_cmd = 0x00;
     uint8_t oldmode;
-    esp_err_t ret = i2c_master_write_read_device(I2C_NUM_0, NPWT_PCA9685_ADDR, 
-                                                 &read_cmd, 1, &oldmode, 1, 
+    esp_err_t ret = i2c_master_write_read_device(I2C_NUM_0, NPWT_PCA9685_ADDR,
+                                                 &read_cmd, 1, &oldmode, 1,
                                                  NPWT_I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to read MODE1: %s", esp_err_to_name(ret));
         oldmode = 0x00; // 使用默认值
     }
-    
+
     // 2. 进入睡眠模式
-    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR, 
-                                     (uint8_t[]){0x00, (oldmode & 0x7F) | 0x10}, 2, 
+    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR,
+                                     (uint8_t[]){0x00, (oldmode & 0x7F) | 0x10}, 2,
                                      NPWT_I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to enter sleep mode: %s", esp_err_to_name(ret));
         return ret;
     }
-    
+
     // 3. 设置预分频寄存器
-    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR, 
-                                     (uint8_t[]){0xFE, prescale}, 2, 
+    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR,
+                                     (uint8_t[]){0xFE, prescale}, 2,
                                      NPWT_I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to set prescale: %s", esp_err_to_name(ret));
         return ret;
     }
-    
+
     // 4. 恢复原模式
-    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR, 
-                                     (uint8_t[]){0x00, oldmode}, 2, 
+    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR,
+                                     (uint8_t[]){0x00, oldmode}, 2,
                                      NPWT_I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to restore MODE1: %s", esp_err_to_name(ret));
         return ret;
     }
-    
+
     vTaskDelay(pdMS_TO_TICKS(5)); // 等待稳定
-    
+
     // 5. 启用自动增量
-    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR, 
-                                     (uint8_t[]){0x00, oldmode | 0x80}, 2, 
+    ret = i2c_master_write_to_device(I2C_NUM_0, NPWT_PCA9685_ADDR,
+                                     (uint8_t[]){0x00, oldmode | 0x80}, 2,
                                      NPWT_I2C_TIMEOUT_MS / portTICK_PERIOD_MS);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to enable auto-increment: %s", esp_err_to_name(ret));
         return ret;
     }
-    
+
     // 计算实际频率并显示
     float actual_freq = 25000000.0f / (4096.0f * (prescale + 1));
     ESP_LOGI(TAG, "PWM frequency set. Target: %d Hz, Actual: %.1f Hz", frequency_hz, actual_freq);
-    
+
     return ESP_OK;
 }
 
@@ -1344,16 +1326,16 @@ esp_err_t npwt_pca9685_set_frequency(uint16_t frequency_hz) {
 esp_err_t npwt_pca9685_test_output(void) {
     ESP_LOGI(TAG, "=== PCA9685 Test Output ===");
     ESP_LOGI(TAG, "I2C Address: 0x%02X, Channel: %d", NPWT_PCA9685_ADDR, NPWT_PCA9685_PWM_CHANNEL);
-    
+
     if (!g_npwt_system.i2c_initialized) {
         ESP_LOGE(TAG, "I2C not initialized!");
         return ESP_ERR_INVALID_STATE;
     }
-    
+
     // 测试不同的PWM值
     uint16_t test_values[] = {0, 1024, 2048, 4095}; // 0%, 25%, 50%, 100%
     const char* test_names[] = {"0%", "25%", "50%", "100%"};
-    
+
     for (int i = 0; i < 4; i++) {
         ESP_LOGI(TAG, "Testing PWM %s (%d)...", test_names[i], test_values[i]);
         esp_err_t ret = npwt_pca9685_set_pwm(NPWT_PCA9685_PWM_CHANNEL, test_values[i]);
@@ -1363,7 +1345,7 @@ esp_err_t npwt_pca9685_test_output(void) {
         }
         vTaskDelay(pdMS_TO_TICKS(2000)); // 等待2秒，便于观察
     }
-    
+
     ESP_LOGI(TAG, "=== Test Complete ===");
     return ESP_OK;
 }
@@ -1371,36 +1353,36 @@ esp_err_t npwt_pca9685_test_output(void) {
 // I2C设备扫描功能
 esp_err_t npwt_i2c_scan_devices(void) {
     ESP_LOGI(TAG, "=== I2C Device Scan ===");
-    
+
     if (!g_npwt_system.i2c_initialized) {
         ESP_LOGE(TAG, "I2C not initialized!");
         return ESP_ERR_INVALID_STATE;
     }
-    
+
     int devices_found = 0;
-    
+
     for (uint8_t addr = 0x08; addr < 0x78; addr++) {
         // 尝试写入一个字节到设备
-        esp_err_t ret = i2c_master_write_to_device(I2C_NUM_0, addr, 
-                                                   (uint8_t[]){0x00}, 1, 
+        esp_err_t ret = i2c_master_write_to_device(I2C_NUM_0, addr,
+                                                   (uint8_t[]){0x00}, 1,
                                                    50 / portTICK_PERIOD_MS);
         if (ret == ESP_OK) {
             ESP_LOGI(TAG, "Found I2C device at address 0x%02X", addr);
             devices_found++;
-            
+
             // 特殊标记PCA9685
             if (addr == NPWT_PCA9685_ADDR) {
                 ESP_LOGI(TAG, "  ^-- This is our PCA9685!");
             }
         }
     }
-    
+
     ESP_LOGI(TAG, "I2C scan complete. Found %d devices.", devices_found);
-    
+
     if (devices_found == 0) {
         ESP_LOGW(TAG, "No I2C devices found! Check connections.");
     }
-    
+
     return ESP_OK;
 }
 
@@ -1409,7 +1391,7 @@ esp_err_t npwt_i2c_deinit(void) {
     if (!g_npwt_system.i2c_initialized) {
         return ESP_OK; // 未初始化
     }
-    
+
     // 共享I2C总线，不需要释放硬件资源
     // 只标记为未初始化
     g_npwt_system.i2c_initialized = false;
