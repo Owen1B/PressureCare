@@ -10,16 +10,25 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "nvs.h"
+#include "driver/i2c.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 // 系统配置常量
-#define NPWT_PRESSURE_MIN           -70     // 最小负压值 (kPa)
+#define NPWT_PRESSURE_MIN           -100    // 最小负压值 (kPa)
 #define NPWT_PRESSURE_MAX           0       // 最大负压值 (kPa)
 #define NPWT_PRESSURE_STEP          -1      // 负压调节步长 (kPa)
 #define NPWT_PRESSURE_DEFAULT       -16     // 默认负压值 (kPa, 约-120mmHg)
+
+// I2C和PCA9685配置
+#define NPWT_I2C_SDA_GPIO           8       // I2C SDA引脚 (与板子一致)
+#define NPWT_I2C_SCL_GPIO           9       // I2C SCL引脚 (与板子一致)
+#define NPWT_I2C_FREQ_HZ            100000  // I2C频率 100kHz
+#define NPWT_PCA9685_ADDR           0x40    // PCA9685 I2C地址 (默认地址)
+#define NPWT_PCA9685_PWM_CHANNEL    0       // 使用PWM通道0
+#define NPWT_I2C_TIMEOUT_MS         50      // I2C超时时间
 
 #define NPWT_TIME_MIN               1       // 最小时间 (分钟)
 #define NPWT_TIME_MAX               60      // 最大时间 (分钟)
@@ -60,6 +69,8 @@ typedef struct {
     int16_t current_pressure;   // 当前负压值 (kPa)
     uint16_t pump_pwm;          // 泵PWM值
     uint8_t seal_quality;       // 密封质量 (0-100%)
+    float actual_flow;          // 实际流量 (L/min)
+    float leakage_flow;         // 漏气流量 (L/min)
     uint32_t work_elapsed;      // 工作时间已过 (秒)
     uint32_t rest_elapsed;      // 休息时间已过 (秒)
     npwt_state_t state;         // 当前状态
@@ -100,7 +111,9 @@ typedef struct {
     // 硬件相关
     bool hardware_ready;        // 硬件就绪状态
     uint32_t adc_channel;       // ADC通道
-    uint8_t pca9685_address;    // PCA9685 I2C地址
+    
+    // I2C和PCA9685相关 (使用共享I2C总线)
+    bool i2c_initialized;       // I2C是否已初始化
 
     // 回调函数
     void (*ui_update_callback)(void); // UI更新回调
@@ -163,6 +176,21 @@ void npwt_register_ui_callback(void (*callback)(void));
 
 // 获取当前目标压力（动态模式下会变化）
 int16_t npwt_get_current_target_pressure(void);
+
+// 流量计算相关函数
+float npwt_calculate_theoretical_flow(float pressure_kpa);
+float npwt_calculate_actual_flow(float pressure_kpa, uint16_t pwm_duty);
+uint8_t npwt_flow_to_bar_percentage(float flow_lpm);
+void npwt_update_flow_analysis(void);
+
+// I2C和PCA9685相关函数
+esp_err_t npwt_i2c_init(void);
+esp_err_t npwt_pca9685_init(void);
+esp_err_t npwt_pca9685_set_pwm(uint8_t channel, uint16_t duty);
+esp_err_t npwt_pca9685_set_frequency(uint16_t frequency_hz);
+esp_err_t npwt_pca9685_test_output(void);
+esp_err_t npwt_i2c_scan_devices(void);
+esp_err_t npwt_i2c_deinit(void);
 
 #ifdef __cplusplus
 }

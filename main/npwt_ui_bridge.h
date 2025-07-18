@@ -20,6 +20,7 @@ void npwt_ui_update_main_screen(void);
 void npwt_ui_update_pressure_display(int16_t current_pressure);
 void npwt_ui_update_settings_panel(void);
 void npwt_ui_update_seal_quality(uint8_t quality);
+void npwt_ui_update_flow_display(float flow_lpm);
 void npwt_ui_update_power_button(bool power_on);
 void npwt_ui_update_mode_display(npwt_mode_t mode);
 void npwt_ui_update_state_display(npwt_state_t state);

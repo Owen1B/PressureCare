@@ -27,6 +27,14 @@ esp_err_t npwt_ui_bridge_init(void) {
 
     // 模拟一次密封检查
     npwt_seal_check();
+    
+    // 启动时扫描I2C设备
+    ESP_LOGI(TAG, "Scanning I2C devices...");
+    npwt_i2c_scan_devices();
+    
+    // 启动时测试PCA9685输出
+    ESP_LOGI(TAG, "Running PCA9685 output test...");
+    npwt_pca9685_test_output();
 
     ESP_LOGI(TAG, "UI bridge initialized successfully");
     return ESP_OK;
@@ -71,8 +79,12 @@ void npwt_ui_update_main_screen(void) {
     // 更新设置面板
     npwt_ui_update_settings_panel();
 
-    // 更新密封质量
-    npwt_ui_update_seal_quality(realtime.seal_quality);
+    // 更新流量显示
+    npwt_ui_update_flow_display(realtime.actual_flow);
+
+    // 更新PWM占空比显示 (将PWM值转换为百分比)
+    uint8_t pwm_percentage = (uint8_t)((realtime.pump_pwm * 100) / 4095);
+    npwt_ui_update_seal_quality(pwm_percentage);
 
     // 更新电源按钮状态
     npwt_ui_update_power_button(settings.power_on);
@@ -88,12 +100,8 @@ void npwt_ui_update_main_screen(void) {
 void npwt_ui_update_pressure_display(int16_t current_pressure) {
     char pressure_str[32];
     
-    // 对于传感器测量值，0到-5kPa显示为0
-    if (current_pressure >= -5 && current_pressure <= 0) {
-        snprintf(pressure_str, sizeof(pressure_str), "0");
-    } else {
-        snprintf(pressure_str, sizeof(pressure_str), "%d", current_pressure);
-    }
+    // 直接显示所有压力值
+    snprintf(pressure_str, sizeof(pressure_str), "%d", current_pressure);
 
     // 更新大号压力显示 (使用Label1作为当前压力数值显示)
     if (ui_Label1) {
@@ -127,6 +135,28 @@ void npwt_ui_update_seal_quality(uint8_t quality) {
     if (ui_Bar1) {
         lv_bar_set_value(ui_Bar1, quality, LV_ANIM_ON);
     }
+}
+
+// 更新流量显示
+void npwt_ui_update_flow_display(float flow_lpm) {
+    // 将流量转换为进度条百分比
+    uint8_t bar_percentage = npwt_flow_to_bar_percentage(flow_lpm);
+    
+    // 更新流量进度条 (假设ui_Bar1用于显示流量，如果需要单独的进度条请告诉我)
+    if (ui_Bar1) {
+        lv_bar_set_value(ui_Bar1, bar_percentage, LV_ANIM_OFF);
+    }
+    
+    // 如果有流量数值标签，也可以更新
+    char flow_str[16];
+    snprintf(flow_str, sizeof(flow_str), "%.1f L/min", flow_lpm);
+    
+    // 可以考虑在某个标签上显示流量数值
+    // if (ui_Label_Flow) {
+    //     lv_label_set_text(ui_Label_Flow, flow_str);
+    // }
+    
+    ESP_LOGD(TAG, "Flow display updated: %.1f L/min -> %d%%", flow_lpm, bar_percentage);
 }
 
 // 更新电源按钮状态
@@ -192,9 +222,12 @@ void npwt_ui_update_mode_setting(npwt_mode_t mode) {
 // 事件处理函数
 void npwt_ui_handle_power_button_clicked(void) {
     npwt_settings_t settings = npwt_get_settings();
-    npwt_set_power(!settings.power_on);
+    bool new_power_state = !settings.power_on;
+    npwt_set_power(new_power_state);
 
-    ESP_LOGI(TAG, "Power button clicked: %s", settings.power_on ? "OFF" : "ON");
+    ESP_LOGI(TAG, "Power button clicked: %s -> %s", 
+             settings.power_on ? "ON" : "OFF", 
+             new_power_state ? "ON" : "OFF");
 }
 
 void npwt_ui_handle_settings_button_clicked(void) {
