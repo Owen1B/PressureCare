@@ -26,12 +26,11 @@ esp_err_t npwt_ui_bridge_init(void) {
     npwt_ui_update_settings_screen();
 
     // 模拟一次密封检查
-    npwt_seal_check();
-    
+
     // 启动时扫描I2C设备
     ESP_LOGI(TAG, "Scanning I2C devices...");
     npwt_i2c_scan_devices();
-    
+
     // 启动时测试PCA9685输出
     ESP_LOGI(TAG, "Running PCA9685 output test...");
     npwt_pca9685_test_output();
@@ -50,12 +49,12 @@ void npwt_ui_force_update(void) {
 void npwt_ui_update_callback(void) {
     static uint32_t last_ui_update = 0;
     uint32_t current_time = esp_timer_get_time() / 1000; // 转换为毫秒
-    
+
     // 每1秒更新一次UI显示，或者强制更新
     if (force_ui_update || (current_time - last_ui_update >= 1000)) {
         last_ui_update = current_time;
         force_ui_update = false;
-        
+
         if (lvgl_port_lock(10)) {
             // 更新主界面
             npwt_ui_update_main_screen();
@@ -79,27 +78,27 @@ void npwt_ui_update_main_screen(void) {
     // 更新设置面板
     npwt_ui_update_settings_panel();
 
-    // 更新流量显示
-    npwt_ui_update_flow_display(realtime.actual_flow);
 
     // 更新PWM占空比显示 (将PWM值转换为百分比)
     uint8_t pwm_percentage = (uint8_t)((realtime.pump_pwm * 100) / 4095);
-    npwt_ui_update_seal_quality(pwm_percentage);
+    // npwt_ui_set_bar1(pwm_percentage);
 
-    // 更新电源按钮状态
-    npwt_ui_update_power_button(settings.power_on);
+    // 更新泵速显示 (泵速 = 100% - PWM占空比)
+    uint8_t pump_speed = 100 - pwm_percentage;
+    char pump_speed_str[16];
+    snprintf(pump_speed_str, sizeof(pump_speed_str), "%d%%", pump_speed);
+    if (ui_Label_Head_Temp1) {
+        lv_label_set_text(ui_Label_Head_Temp1, pump_speed_str);
+    }
 
-    // 更新模式显示
-    npwt_ui_update_mode_display(settings.mode);
 
-    // 更新状态显示
-    npwt_ui_update_state_display(realtime.state);
+
 }
 
 // 更新压力显示
 void npwt_ui_update_pressure_display(int16_t current_pressure) {
     char pressure_str[32];
-    
+
     // 直接显示所有压力值
     snprintf(pressure_str, sizeof(pressure_str), "%d", current_pressure);
 
@@ -129,45 +128,16 @@ void npwt_ui_update_settings_panel(void) {
     }
 }
 
-// 更新密封质量
-void npwt_ui_update_seal_quality(uint8_t quality) {
-    // 更新密封质量进度条 (ui_Bar1用于显示密封质量)
+// 设置bar1
+void npwt_ui_set_bar1(uint8_t value) {
+    // 更新PWM占空比进度条 (ui_Bar1用于显示PWM占空比百分比)
     if (ui_Bar1) {
-        lv_bar_set_value(ui_Bar1, quality, LV_ANIM_ON);
+        lv_bar_set_value(ui_Bar1, value, LV_ANIM_ON);
     }
 }
 
-// 更新流量显示
-void npwt_ui_update_flow_display(float flow_lpm) {
-    // 将流量转换为进度条百分比
-    uint8_t bar_percentage = npwt_flow_to_bar_percentage(flow_lpm);
-    
-    // 更新流量进度条 (假设ui_Bar1用于显示流量，如果需要单独的进度条请告诉我)
-    if (ui_Bar1) {
-        lv_bar_set_value(ui_Bar1, bar_percentage, LV_ANIM_OFF);
-    }
-    
-    // 如果有流量数值标签，也可以更新
-    char flow_str[16];
-    snprintf(flow_str, sizeof(flow_str), "%.1f L/min", flow_lpm);
-    
-    // 可以考虑在某个标签上显示流量数值
-    // if (ui_Label_Flow) {
-    //     lv_label_set_text(ui_Label_Flow, flow_str);
-    // }
-    
-    ESP_LOGD(TAG, "Flow display updated: %.1f L/min -> %d%%", flow_lpm, bar_percentage);
-}
 
 // 更新电源按钮状态
-void npwt_ui_update_power_button(bool power_on) {
-    // 更新电源按钮的视觉状态 (ui_BTN_Pause_Top1作为总开关)
-    // 不设置颜色，保持原有样式
-    if (ui_BTN_Pause_Top1) {
-        // 可以考虑其他视觉提示方式，如透明度或边框
-        // 这里暂时保持原样
-    }
-}
 
 // 更新设置界面
 void npwt_ui_update_settings_screen(void) {
@@ -225,8 +195,8 @@ void npwt_ui_handle_power_button_clicked(void) {
     bool new_power_state = !settings.power_on;
     npwt_set_power(new_power_state);
 
-    ESP_LOGI(TAG, "Power button clicked: %s -> %s", 
-             settings.power_on ? "ON" : "OFF", 
+    ESP_LOGI(TAG, "Power button clicked: %s -> %s",
+             settings.power_on ? "ON" : "OFF",
              new_power_state ? "ON" : "OFF");
 }
 
@@ -342,22 +312,6 @@ const char* npwt_ui_get_mode_string(npwt_mode_t mode) {
     }
 }
 
-const char* npwt_ui_get_state_string(npwt_state_t state) {
-    switch (state) {
-        case NPWT_STATE_IDLE:
-            return "待机";
-        case NPWT_STATE_WORKING:
-            return "工作中";
-        case NPWT_STATE_RESTING:
-            return "休息中";
-        case NPWT_STATE_SEALING_CHECK:
-            return "密封检查";
-        case NPWT_STATE_ERROR:
-            return "错误";
-        default:
-            return "未知状态";
-    }
-}
 
 void npwt_ui_format_pressure(int16_t pressure, char* buffer, size_t buffer_size) {
     if (pressure == 0) {
@@ -372,34 +326,3 @@ void npwt_ui_format_time(uint8_t minutes, char* buffer, size_t buffer_size) {
 }
 
 // 模式和状态显示更新
-void npwt_ui_update_mode_display(npwt_mode_t mode) {
-    const char* mode_str = npwt_ui_get_mode_string(mode);
-
-    // 更新模式显示
-    // 示例：lv_label_set_text(ui_Label_Current_Mode, mode_str);
-}
-
-void npwt_ui_update_state_display(npwt_state_t state) {
-    const char* state_str = npwt_ui_get_state_string(state);
-
-    // 更新状态显示
-    // 示例：lv_label_set_text(ui_Label_Current_State, state_str);
-
-    // 根据状态改变指示灯颜色
-    switch (state) {
-        case NPWT_STATE_IDLE:
-            // 设置为灰色
-            break;
-        case NPWT_STATE_WORKING:
-            // 设置为绿色
-            break;
-        case NPWT_STATE_RESTING:
-            // 设置为蓝色
-            break;
-        case NPWT_STATE_ERROR:
-            // 设置为红色
-            break;
-        default:
-            break;
-    }
-}

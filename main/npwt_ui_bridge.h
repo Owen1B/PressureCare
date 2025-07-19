@@ -19,11 +19,7 @@ void npwt_ui_force_update(void);
 void npwt_ui_update_main_screen(void);
 void npwt_ui_update_pressure_display(int16_t current_pressure);
 void npwt_ui_update_settings_panel(void);
-void npwt_ui_update_seal_quality(uint8_t quality);
-void npwt_ui_update_flow_display(float flow_lpm);
-void npwt_ui_update_power_button(bool power_on);
-void npwt_ui_update_mode_display(npwt_mode_t mode);
-void npwt_ui_update_state_display(npwt_state_t state);
+void npwt_ui_set_bar1(uint8_t value);
 
 // 界面2 - 设置界面相关函数
 void npwt_ui_update_settings_screen(void);
@@ -46,7 +42,6 @@ void npwt_ui_handle_save_settings(void);
 bool npwt_ui_validate_pressure(int16_t pressure);
 bool npwt_ui_validate_time(uint8_t minutes);
 const char* npwt_ui_get_mode_string(npwt_mode_t mode);
-const char* npwt_ui_get_state_string(npwt_state_t state);
 void npwt_ui_format_pressure(int16_t pressure, char* buffer, size_t buffer_size);
 void npwt_ui_format_time(uint8_t minutes, char* buffer, size_t buffer_size);
 

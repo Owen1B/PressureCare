@@ -36,6 +36,7 @@ LV_IMG_DECLARE( ui_img_new_home_png);   // assets/new_home.png
 LV_IMG_DECLARE( ui_img_btn_setting_png);   // assets/btn_setting.png
 LV_IMG_DECLARE( ui_img_icn_head_png);   // assets/icn_head.png
 LV_IMG_DECLARE( ui_img_icn_bed_png);   // assets/icn_bed.png
+LV_IMG_DECLARE( ui_img_icn_time_1_png);   // assets/icn_time_1.png
 LV_IMG_DECLARE( ui_img_btn_print_down_png);   // assets/btn_print_down.png
 LV_IMG_DECLARE( ui_img_btn_print_top_off_png);   // assets/btn_print_top_off.png
 LV_IMG_DECLARE( ui_img_open_png);   // assets/open.png
@@ -51,11 +52,11 @@ LV_IMG_DECLARE( ui_img_new_setting_png);   // assets/new_setting.png
 
 // FONTS
 LV_FONT_DECLARE( ui_font_Small_Font);
-LV_FONT_DECLARE( ui_font_chinese18);
-LV_FONT_DECLARE( ui_font_chinese24);
+LV_FONT_DECLARE( ui_font_notosans150);
 LV_FONT_DECLARE( ui_font_notosans24);
 LV_FONT_DECLARE( ui_font_notosans56);
-LV_FONT_DECLARE( ui_font_notosans150);
+LV_FONT_DECLARE( ui_font_chinese18);
+LV_FONT_DECLARE( ui_font_chinese24);
 
 // UI INIT
 void ui_init(void);

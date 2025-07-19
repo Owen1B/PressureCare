@@ -235,7 +235,6 @@ static void npwt_control_task(void *pvParameters) {
         npwt_update_flow_analysis();
 
         // 更新密封检查
-        npwt_seal_check();
 
         xSemaphoreGive(g_npwt_system.data_mutex);
 
@@ -558,8 +557,8 @@ esp_err_t npwt_mode_continuous_run(void) {
     uint16_t pwm_duty = 4095 - (uint16_t)pid_output;
     
     // 限制PWM范围：60%-90%（避免100%停泵和过快运行）
-    if (pwm_duty > 3686) pwm_duty = 3686;  // 最大90%（避免接近停泵）
-    if (pwm_duty < 2457) pwm_duty = 2457;  // 最小60%（泵最快，安全限制）
+    if (pwm_duty > NPWT_PWM_WORKING_MAX) pwm_duty = NPWT_PWM_WORKING_MAX;  // 最大90%（避免接近停泵）
+    if (pwm_duty < NPWT_PWM_WORKING_MIN) pwm_duty = NPWT_PWM_WORKING_MIN;  // 最小60%（泵最快，安全限制）
 
     ESP_LOGI(TAG, "PID output: %.2f, PWM duty: %d (%.1f%%)", pid_output, pwm_duty, (pwm_duty * 100.0f) / 4095.0f);
     npwt_pwm_set_duty(pwm_duty);
@@ -588,8 +587,8 @@ esp_err_t npwt_mode_intermittent_run(void) {
             );
             // 反向PWM控制
             uint16_t pwm_duty = 4095 - (uint16_t)pid_output;
-            if (pwm_duty > 4095) pwm_duty = 4095;
-            if (pwm_duty < 2457) pwm_duty = 2457;
+            if (pwm_duty > NPWT_PWM_WORKING_MAX) pwm_duty = NPWT_PWM_WORKING_MAX;
+            if (pwm_duty < NPWT_PWM_WORKING_MIN) pwm_duty = NPWT_PWM_WORKING_MIN;
             npwt_pwm_set_duty(pwm_duty);
         }
     } else if (g_npwt_system.realtime.state == NPWT_STATE_RESTING) {
@@ -610,7 +609,10 @@ esp_err_t npwt_mode_intermittent_run(void) {
             g_npwt_system.realtime.work_elapsed = 0;
             g_npwt_system.realtime.rest_elapsed = 0;
             npwt_pid_reset(&g_npwt_system.pid);
-            ESP_LOGI(TAG, "Intermittent mode started, PID reset");
+            // 设置初始PWM占空比
+            g_npwt_system.realtime.pump_pwm = NPWT_PWM_STARTUP;
+            npwt_pwm_set_duty(NPWT_PWM_STARTUP);
+            ESP_LOGI(TAG, "Intermittent mode started, PID reset, initial PWM set");
         }
     }
 
@@ -646,8 +648,8 @@ esp_err_t npwt_mode_dynamic_run(void) {
             );
             // 反向PWM控制
             uint16_t pwm_duty = 4095 - (uint16_t)pid_output;
-            if (pwm_duty > 4095) pwm_duty = 4095;
-            if (pwm_duty < 2457) pwm_duty = 2457;
+            if (pwm_duty > NPWT_PWM_WORKING_MAX) pwm_duty = NPWT_PWM_WORKING_MAX;
+            if (pwm_duty < NPWT_PWM_WORKING_MIN) pwm_duty = NPWT_PWM_WORKING_MIN;
             npwt_pwm_set_duty(pwm_duty);
         }
     } else if (g_npwt_system.realtime.state == NPWT_STATE_RESTING) {
@@ -675,8 +677,8 @@ esp_err_t npwt_mode_dynamic_run(void) {
             );
             // 反向PWM控制
             uint16_t pwm_duty = 4095 - (uint16_t)pid_output;
-            if (pwm_duty > 4095) pwm_duty = 4095;
-            if (pwm_duty < 2457) pwm_duty = 2457;
+            if (pwm_duty > NPWT_PWM_WORKING_MAX) pwm_duty = NPWT_PWM_WORKING_MAX;
+            if (pwm_duty < NPWT_PWM_WORKING_MIN) pwm_duty = NPWT_PWM_WORKING_MIN;
             npwt_pwm_set_duty(pwm_duty);
         }
     } else {
@@ -686,7 +688,10 @@ esp_err_t npwt_mode_dynamic_run(void) {
             g_npwt_system.realtime.work_elapsed = 0;
             g_npwt_system.realtime.rest_elapsed = 0;
             npwt_pid_reset(&g_npwt_system.pid);
-            ESP_LOGI(TAG, "Dynamic mode started, PID reset");
+            // 设置初始PWM占空比
+            g_npwt_system.realtime.pump_pwm = NPWT_PWM_STARTUP;
+            npwt_pwm_set_duty(NPWT_PWM_STARTUP);
+            ESP_LOGI(TAG, "Dynamic mode started, PID reset, initial PWM set");
         }
     }
 
@@ -809,10 +814,9 @@ esp_err_t npwt_set_power(bool power_on) {
         // 重置PID控制器，清除积分和历史误差
         npwt_pid_reset(&g_npwt_system.pid);
         
-        // 启动时直接设置为90%占空比，跳过100%停泵状态
-        uint16_t startup_pwm = (uint16_t)(0.9f * 4095.0f);  // 90%占空比
-        g_npwt_system.realtime.pump_pwm = startup_pwm;
-        npwt_pwm_set_duty(startup_pwm);
+        // 启动时直接设置为初始PWM占空比，跳过100%停泵状态
+        g_npwt_system.realtime.pump_pwm = NPWT_PWM_STARTUP;
+        npwt_pwm_set_duty(NPWT_PWM_STARTUP);
         
         ESP_LOGI(TAG, "System started with 90%% PWM, PID reset and control will begin");
     }
@@ -1020,15 +1024,6 @@ float npwt_kalman_update(npwt_kalman_t *kalman, float measurement) {
 }
 
 // 密封检查 (模拟)
-esp_err_t npwt_seal_check(void) {
-    // 模拟密封质量检查
-    // 实际硬件到位后替换为真实的检查逻辑
-
-    static uint8_t seal_quality = 85; // 模拟85%密封质量
-    g_npwt_system.realtime.seal_quality = seal_quality;
-
-    return ESP_OK;
-}
 
 // 系统反初始化
 esp_err_t npwt_system_deinit(void) {

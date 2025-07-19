@@ -37,6 +37,9 @@ extern "C" {
 
 #define NPWT_PWM_MIN                0       // PWM最小值
 #define NPWT_PWM_MAX                4095    // PWM最大值 (12-bit)
+#define NPWT_PWM_STARTUP            3686    // 启动时初始PWM占空比 (90%)
+#define NPWT_PWM_WORKING_MAX        3686    // 工作时最大PWM占空比 (90%)
+#define NPWT_PWM_WORKING_MIN        2457    // 工作时最小PWM占空比 (60%)
 #define NPWT_ADC_SAMPLES            10      // ADC采样次数
 
 // 工作模式枚举
@@ -169,7 +172,6 @@ esp_err_t npwt_mode_dynamic_run(void);
 
 // 安全检查
 bool npwt_safety_check(void);
-esp_err_t npwt_seal_check(void);
 
 // UI回调注册
 void npwt_register_ui_callback(void (*callback)(void));
