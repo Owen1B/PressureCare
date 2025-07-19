@@ -389,8 +389,9 @@ uint8_t npwt_ui_get_cycle_progress(void) {
                 return 0;
             }
             
-            // 计算周期进度百分比
-            uint8_t progress = (current_elapsed * 100) / total_cycle_sec;
+            // 计算周期进度百分比，使用浮点数计算提高精度
+            float progress_float = ((float)current_elapsed / (float)total_cycle_sec) * 100.0f;
+            uint8_t progress = (uint8_t)(progress_float + 0.5f); // 四舍五入
             return progress > 100 ? 100 : progress;
         }
         
@@ -464,8 +465,8 @@ void npwt_ui_check_anomalies(void) {
     npwt_settings_t settings = npwt_get_settings();
     uint32_t current_time = esp_timer_get_time() / 1000; // 转换为ms
     
-    // 只在系统运行时检测异常
-    if (!settings.power_on || g_anomaly_detection.current_status != NPWT_SYSTEM_STATUS_RUNNING) {
+    // 只在系统运行且开启异常自动停止时检测异常
+    if (!settings.power_on || g_anomaly_detection.current_status != NPWT_SYSTEM_STATUS_RUNNING || !g_anomaly_detection.auto_stop_enabled) {
         g_anomaly_detection.leak_detection_start = 0;
         g_anomaly_detection.blockage_detection_start = 0;
         return;
@@ -525,6 +526,19 @@ void npwt_ui_check_anomalies(void) {
 
 void npwt_ui_handle_auto_stop_button_clicked(void) {
     g_anomaly_detection.auto_stop_enabled = !g_anomaly_detection.auto_stop_enabled;
+    
+    // 如果关闭了自动停止，且系统正在运行，则重置状态为正常运行
+    if (!g_anomaly_detection.auto_stop_enabled) {
+        npwt_settings_t settings = npwt_get_settings();
+        if (settings.power_on && (g_anomaly_detection.current_status == NPWT_SYSTEM_STATUS_LEAK || 
+                                 g_anomaly_detection.current_status == NPWT_SYSTEM_STATUS_BLOCKAGE)) {
+            npwt_ui_set_system_status(NPWT_SYSTEM_STATUS_RUNNING);
+        }
+        // 清除异常检测计时器
+        g_anomaly_detection.leak_detection_start = 0;
+        g_anomaly_detection.blockage_detection_start = 0;
+    }
+    
     ESP_LOGI(TAG, "Auto-stop %s", g_anomaly_detection.auto_stop_enabled ? "enabled" : "disabled");
 }
 

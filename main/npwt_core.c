@@ -452,9 +452,10 @@ esp_err_t npwt_pid_init(npwt_pid_t *pid) {
     if (!pid) return ESP_ERR_INVALID_ARG;
 
     // PID参数 - 反向PWM控制（100%=停止，60%=最快）
-    pid->kp = 10.0f;    // 降低比例系数，减少响应速度
-    pid->ki = 0.5f;     // 降低积分系数，减少积分累积
-    pid->kd = 0.2f;     // 降低微分系数，减少震荡
+    // 优化为快速响应，1-2秒内达到目标负压
+    pid->kp = 25.0f;    // 提高比例系数，加快响应速度
+    pid->ki = 2.0f;     // 提高积分系数，消除稳态误差
+    pid->kd = 1.0f;     // 适度提高微分系数，减少超调
 
     pid->integral = 0.0f;
     pid->prev_error = 0.0f;
