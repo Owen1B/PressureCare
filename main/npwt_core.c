@@ -528,6 +528,12 @@ void npwt_reset_pwm_test_mode(void) {
 
 // 持续模式运行
 esp_err_t npwt_mode_continuous_run(void) {
+    // 首次进入工作模式时重置PID（从IDLE状态切换时）
+    if (g_npwt_system.realtime.state == NPWT_STATE_IDLE) {
+        npwt_pid_reset(&g_npwt_system.pid);
+        ESP_LOGI(TAG, "Entering continuous mode, PID reset");
+    }
+    
     g_npwt_system.realtime.state = NPWT_STATE_WORKING;
 
     // 添加调试信息
@@ -550,7 +556,9 @@ esp_err_t npwt_mode_continuous_run(void) {
 
     // 反向PWM控制（100%占空比=泵停止，0%占空比=泵最快）
     uint16_t pwm_duty = 4095 - (uint16_t)pid_output;
-    if (pwm_duty > 4095) pwm_duty = 4095;  // 最大100%（泵停止）
+    
+    // 限制PWM范围：60%-90%（避免100%停泵和过快运行）
+    if (pwm_duty > 3686) pwm_duty = 3686;  // 最大90%（避免接近停泵）
     if (pwm_duty < 2457) pwm_duty = 2457;  // 最小60%（泵最快，安全限制）
 
     ESP_LOGI(TAG, "PID output: %.2f, PWM duty: %d (%.1f%%)", pid_output, pwm_duty, (pwm_duty * 100.0f) / 4095.0f);
@@ -797,9 +805,16 @@ esp_err_t npwt_set_power(bool power_on) {
         g_npwt_system.realtime.state = NPWT_STATE_IDLE;
         g_npwt_system.realtime.work_elapsed = 0;
         g_npwt_system.realtime.rest_elapsed = 0;
-        g_npwt_system.realtime.pump_pwm = 0;  // 初始为0，等待PID控制
-        npwt_reset_pwm_test_mode();  // 重置PWM测试模式
-        ESP_LOGI(TAG, "System started, PID control will begin");
+        
+        // 重置PID控制器，清除积分和历史误差
+        npwt_pid_reset(&g_npwt_system.pid);
+        
+        // 启动时直接设置为90%占空比，跳过100%停泵状态
+        uint16_t startup_pwm = (uint16_t)(0.9f * 4095.0f);  // 90%占空比
+        g_npwt_system.realtime.pump_pwm = startup_pwm;
+        npwt_pwm_set_duty(startup_pwm);
+        
+        ESP_LOGI(TAG, "System started with 90%% PWM, PID reset and control will begin");
     }
 
     xSemaphoreGive(g_npwt_system.data_mutex);
@@ -1170,8 +1185,8 @@ esp_err_t npwt_pca9685_init(void) {
 
     vTaskDelay(pdMS_TO_TICKS(10)); // 等待复位完成
 
-    // Step 2: 设置PWM频率为20kHz (静音运行)
-    uint16_t pwm_frequency = 20000;
+    // Step 2: 设置PWM频率为1kHz (平衡噪音和性能)
+    uint16_t pwm_frequency = 1000;
     ret = npwt_pca9685_set_frequency(pwm_frequency);
     if (ret != ESP_OK) {
         ESP_LOGW(TAG, "Failed to set PWM frequency: %s", esp_err_to_name(ret));
