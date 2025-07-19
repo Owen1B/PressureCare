@@ -58,6 +58,8 @@ extern lv_obj_t *ui_BTN_Image_Top3;
 extern lv_obj_t *ui_Label_Z_Position_4;
 extern lv_obj_t *ui_Arrow_Z_up3;
 extern lv_obj_t *ui_Arrow_Z_Down3;
+extern lv_obj_t *ui_BTN_Reset2;
+extern lv_obj_t *ui_Label_Reset1;
 extern lv_obj_t *ui_Display_Pos_XY2;
 extern lv_obj_t *ui_DP7;
 extern lv_obj_t *ui_Label_X_Position2;

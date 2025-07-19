@@ -5,7 +5,7 @@
 
 #include "../ui.h"
 
-lv_obj_t *ui_Screen_1_Print1 = NULL;lv_obj_t *ui_Background3 = NULL;lv_obj_t *ui_Panel_Header3 = NULL;lv_obj_t *ui_Label_Header3 = NULL;lv_obj_t *ui_Label_Header6 = NULL;lv_obj_t *ui_BTN_Menu_Print_S4 = NULL;lv_obj_t *ui_BTN_Menu_Setting_S4 = NULL;lv_obj_t *ui_S1_Content_Panel3 = NULL;lv_obj_t *ui_Display_Heat_S2 = NULL;lv_obj_t *ui_DT6 = NULL;lv_obj_t *ui_Label_Printing_Head_Temp1 = NULL;lv_obj_t *ui_IMG_Head2 = NULL;lv_obj_t *ui_Label_Head_Temp2 = NULL;lv_obj_t *ui_Panel5 = NULL;lv_obj_t *ui_DT3_copy1 = NULL;lv_obj_t *ui_Label_Printing_Bed_Temp2 = NULL;lv_obj_t *ui_IMG_Head3 = NULL;lv_obj_t *ui_Label_Bed_Temp2 = NULL;lv_obj_t *ui_Label_Printing_Head_Temp3 = NULL;lv_obj_t *ui_Bar1 = NULL;lv_obj_t *ui_Panel1 = NULL;lv_obj_t *ui_Image2 = NULL;lv_obj_t *ui_Label_Printing_Head_Temp2 = NULL;lv_obj_t *ui_Label_Head_Temp1 = NULL;lv_obj_t *ui_Panel_Buttons_S2 = NULL;lv_obj_t *ui_BTN_Pause1 = NULL;lv_obj_t *ui_BTN_Pause_Top1 = NULL;lv_obj_t *ui_Image_Pause1 = NULL;lv_obj_t *ui_Label2 = NULL;lv_obj_t *ui_Label1 = NULL;
+lv_obj_t *ui_Screen_1_Print1 = NULL;lv_obj_t *ui_Background3 = NULL;lv_obj_t *ui_Panel_Header3 = NULL;lv_obj_t *ui_Label_Header3 = NULL;lv_obj_t *ui_Label_Header6 = NULL;lv_obj_t *ui_Label_Header1 = NULL;lv_obj_t *ui_BTN_Menu_Print_S4 = NULL;lv_obj_t *ui_BTN_Menu_Setting_S4 = NULL;lv_obj_t *ui_S1_Content_Panel3 = NULL;lv_obj_t *ui_Display_Heat_S2 = NULL;lv_obj_t *ui_DT6 = NULL;lv_obj_t *ui_Label_Printing_Head_Temp1 = NULL;lv_obj_t *ui_IMG_Head2 = NULL;lv_obj_t *ui_Label_Head_Temp2 = NULL;lv_obj_t *ui_Panel5 = NULL;lv_obj_t *ui_DT3_copy1 = NULL;lv_obj_t *ui_Label_Printing_Bed_Temp2 = NULL;lv_obj_t *ui_IMG_Head3 = NULL;lv_obj_t *ui_Label_Bed_Temp2 = NULL;lv_obj_t *ui_Label_Printing_Head_Temp3 = NULL;lv_obj_t *ui_Bar1 = NULL;lv_obj_t *ui_Panel1 = NULL;lv_obj_t *ui_Image2 = NULL;lv_obj_t *ui_Label_Printing_Head_Temp2 = NULL;lv_obj_t *ui_Label_Head_Temp1 = NULL;lv_obj_t *ui_Panel_Buttons_S2 = NULL;lv_obj_t *ui_BTN_Pause1 = NULL;lv_obj_t *ui_BTN_Pause_Top1 = NULL;lv_obj_t *ui_Image_Pause1 = NULL;lv_obj_t *ui_Label2 = NULL;lv_obj_t *ui_Label1 = NULL;
 // event funtions
 void ui_event_BTN_Menu_Setting_S4( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -79,6 +79,18 @@ lv_label_set_recolor(ui_Label_Header6,"true");
 lv_obj_set_style_text_color(ui_Label_Header6, lv_color_hex(0xFFFFFF), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_Label_Header6, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
 lv_obj_set_style_text_font(ui_Label_Header6, &ui_font_chinese18, LV_PART_MAIN| LV_STATE_DEFAULT);
+
+ui_Label_Header1 = lv_label_create(ui_Panel_Header3);
+lv_obj_set_width( ui_Label_Header1, LV_SIZE_CONTENT);  /// 1
+lv_obj_set_height( ui_Label_Header1, LV_SIZE_CONTENT);   /// 1
+lv_obj_set_x( ui_Label_Header1, 230 );
+lv_obj_set_y( ui_Label_Header1, -3 );
+lv_obj_set_align( ui_Label_Header1, LV_ALIGN_CENTER );
+lv_label_set_text(ui_Label_Header1,"准备就绪");
+lv_label_set_recolor(ui_Label_Header1,"true");
+lv_obj_set_style_text_color(ui_Label_Header1, lv_color_hex(0xFFFB2C), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_text_opa(ui_Label_Header1, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_text_font(ui_Label_Header1, &ui_font_chinese18, LV_PART_MAIN| LV_STATE_DEFAULT);
 
 ui_BTN_Menu_Print_S4 = lv_img_create(ui_Screen_1_Print1);
 lv_img_set_src(ui_BTN_Menu_Print_S4, &ui_img_new_home_png);
@@ -245,10 +257,10 @@ lv_obj_set_style_text_font(ui_Label_Bed_Temp2, &ui_font_chinese24, LV_PART_MAIN|
 ui_Label_Printing_Head_Temp3 = lv_label_create(ui_Display_Heat_S2);
 lv_obj_set_width( ui_Label_Printing_Head_Temp3, LV_SIZE_CONTENT);  /// 1
 lv_obj_set_height( ui_Label_Printing_Head_Temp3, LV_SIZE_CONTENT);   /// 1
-lv_obj_set_x( ui_Label_Printing_Head_Temp3, -208 );
+lv_obj_set_x( ui_Label_Printing_Head_Temp3, -223 );
 lv_obj_set_y( ui_Label_Printing_Head_Temp3, 105 );
 lv_obj_set_align( ui_Label_Printing_Head_Temp3, LV_ALIGN_TOP_MID );
-lv_label_set_text(ui_Label_Printing_Head_Temp3,"密封性");
+lv_label_set_text(ui_Label_Printing_Head_Temp3,"治疗周期");
 lv_label_set_recolor(ui_Label_Printing_Head_Temp3,"true");
 lv_obj_set_style_text_color(ui_Label_Printing_Head_Temp3, lv_color_hex(0x9098AA), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_Label_Printing_Head_Temp3, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
@@ -414,6 +426,7 @@ ui_Background3= NULL;
 ui_Panel_Header3= NULL;
 ui_Label_Header3= NULL;
 ui_Label_Header6= NULL;
+ui_Label_Header1= NULL;
 ui_BTN_Menu_Print_S4= NULL;
 ui_BTN_Menu_Setting_S4= NULL;
 ui_S1_Content_Panel3= NULL;

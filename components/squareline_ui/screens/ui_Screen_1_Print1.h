@@ -18,6 +18,7 @@ extern lv_obj_t *ui_Background3;
 extern lv_obj_t *ui_Panel_Header3;
 extern lv_obj_t *ui_Label_Header3;
 extern lv_obj_t *ui_Label_Header6;
+extern lv_obj_t *ui_Label_Header1;
 extern lv_obj_t *ui_BTN_Menu_Print_S4;
 extern void ui_event_BTN_Menu_Setting_S4( lv_event_t * e);
 extern lv_obj_t *ui_BTN_Menu_Setting_S4;

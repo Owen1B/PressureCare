@@ -5,7 +5,7 @@
 
 #include "../ui.h"
 
-lv_obj_t *ui_Screen_2_Move1 = NULL;lv_obj_t *ui_Background4 = NULL;lv_obj_t *ui_Panel_Header4 = NULL;lv_obj_t *ui_Label_Header5 = NULL;lv_obj_t *ui_Label_Header7 = NULL;lv_obj_t *ui_BTN_Menu_Print_S5 = NULL;lv_obj_t *ui_S1_Content_Panel4 = NULL;lv_obj_t *ui_Display_Pos_y1 = NULL;lv_obj_t *ui_DP6 = NULL;lv_obj_t *ui_Label_Z_Position1 = NULL;lv_obj_t *ui_Label_Z_Position_Number1 = NULL;lv_obj_t *ui_BTN_Move_Z1 = NULL;lv_obj_t *ui_GLOW_7 = NULL;lv_obj_t *ui_GLOW_8 = NULL;lv_obj_t *ui_BTN_Image_Top1 = NULL;lv_obj_t *ui_Label_Z_Position_1 = NULL;lv_obj_t *ui_Arrow_Z_up1 = NULL;lv_obj_t *ui_Arrow_Z_Down1 = NULL;lv_obj_t *ui_BTN_Reset1 = NULL;lv_obj_t *ui_Label_Reset3 = NULL;lv_obj_t *ui_Roller_Number3 = NULL;lv_obj_t *ui_Image6 = NULL;lv_obj_t *ui_Roller7 = NULL;lv_obj_t *ui_Label_Steps3 = NULL;lv_obj_t *ui_BTN_Move_Z2 = NULL;lv_obj_t *ui_GLOW_9 = NULL;lv_obj_t *ui_GLOW_10 = NULL;lv_obj_t *ui_BTN_Image_Top2 = NULL;lv_obj_t *ui_Label_Z_Position_3 = NULL;lv_obj_t *ui_Arrow_Z_up2 = NULL;lv_obj_t *ui_Arrow_Z_Down2 = NULL;lv_obj_t *ui_BTN_Move_Z3 = NULL;lv_obj_t *ui_GLOW_11 = NULL;lv_obj_t *ui_GLOW_12 = NULL;lv_obj_t *ui_BTN_Image_Top3 = NULL;lv_obj_t *ui_Label_Z_Position_4 = NULL;lv_obj_t *ui_Arrow_Z_up3 = NULL;lv_obj_t *ui_Arrow_Z_Down3 = NULL;lv_obj_t *ui_Display_Pos_XY2 = NULL;lv_obj_t *ui_DP7 = NULL;lv_obj_t *ui_Label_X_Position2 = NULL;lv_obj_t *ui_Label_X_Position_Number2 = NULL;lv_obj_t *ui_Panel7 = NULL;lv_obj_t *ui_DP4 = NULL;lv_obj_t *ui_Label_Y_Position2 = NULL;lv_obj_t *ui_Label_Time_7 = NULL;lv_obj_t *ui_BTN_Menu_Print_S8 = NULL;
+lv_obj_t *ui_Screen_2_Move1 = NULL;lv_obj_t *ui_Background4 = NULL;lv_obj_t *ui_Panel_Header4 = NULL;lv_obj_t *ui_Label_Header5 = NULL;lv_obj_t *ui_Label_Header7 = NULL;lv_obj_t *ui_BTN_Menu_Print_S5 = NULL;lv_obj_t *ui_S1_Content_Panel4 = NULL;lv_obj_t *ui_Display_Pos_y1 = NULL;lv_obj_t *ui_DP6 = NULL;lv_obj_t *ui_Label_Z_Position1 = NULL;lv_obj_t *ui_Label_Z_Position_Number1 = NULL;lv_obj_t *ui_BTN_Move_Z1 = NULL;lv_obj_t *ui_GLOW_7 = NULL;lv_obj_t *ui_GLOW_8 = NULL;lv_obj_t *ui_BTN_Image_Top1 = NULL;lv_obj_t *ui_Label_Z_Position_1 = NULL;lv_obj_t *ui_Arrow_Z_up1 = NULL;lv_obj_t *ui_Arrow_Z_Down1 = NULL;lv_obj_t *ui_BTN_Reset1 = NULL;lv_obj_t *ui_Label_Reset3 = NULL;lv_obj_t *ui_Roller_Number3 = NULL;lv_obj_t *ui_Image6 = NULL;lv_obj_t *ui_Roller7 = NULL;lv_obj_t *ui_Label_Steps3 = NULL;lv_obj_t *ui_BTN_Move_Z2 = NULL;lv_obj_t *ui_GLOW_9 = NULL;lv_obj_t *ui_GLOW_10 = NULL;lv_obj_t *ui_BTN_Image_Top2 = NULL;lv_obj_t *ui_Label_Z_Position_3 = NULL;lv_obj_t *ui_Arrow_Z_up2 = NULL;lv_obj_t *ui_Arrow_Z_Down2 = NULL;lv_obj_t *ui_BTN_Move_Z3 = NULL;lv_obj_t *ui_GLOW_11 = NULL;lv_obj_t *ui_GLOW_12 = NULL;lv_obj_t *ui_BTN_Image_Top3 = NULL;lv_obj_t *ui_Label_Z_Position_4 = NULL;lv_obj_t *ui_Arrow_Z_up3 = NULL;lv_obj_t *ui_Arrow_Z_Down3 = NULL;lv_obj_t *ui_BTN_Reset2 = NULL;lv_obj_t *ui_Label_Reset1 = NULL;lv_obj_t *ui_Display_Pos_XY2 = NULL;lv_obj_t *ui_DP7 = NULL;lv_obj_t *ui_Label_X_Position2 = NULL;lv_obj_t *ui_Label_X_Position_Number2 = NULL;lv_obj_t *ui_Panel7 = NULL;lv_obj_t *ui_DP4 = NULL;lv_obj_t *ui_Label_Y_Position2 = NULL;lv_obj_t *ui_Label_Time_7 = NULL;lv_obj_t *ui_BTN_Menu_Print_S8 = NULL;
 // event funtions
 void ui_event_BTN_Menu_Print_S5( lv_event_t * e) {
     lv_event_code_t event_code = lv_event_get_code(e);
@@ -399,8 +399,8 @@ lv_imgbtn_set_src(ui_BTN_Reset1, LV_IMGBTN_STATE_CHECKED_PRESSED, NULL, &ui_img_
 lv_imgbtn_set_src(ui_BTN_Reset1, LV_IMGBTN_STATE_CHECKED_RELEASED, NULL, &ui_img_btn_main_on_png, NULL);
 lv_obj_set_height( ui_BTN_Reset1, 66);
 lv_obj_set_width( ui_BTN_Reset1, LV_SIZE_CONTENT);  /// 100
-lv_obj_set_x( ui_BTN_Reset1, -22 );
-lv_obj_set_y( ui_BTN_Reset1, 281 );
+lv_obj_set_x( ui_BTN_Reset1, -27 );
+lv_obj_set_y( ui_BTN_Reset1, 328 );
 lv_obj_set_align( ui_BTN_Reset1, LV_ALIGN_TOP_RIGHT );
 lv_obj_set_style_text_color(ui_BTN_Reset1, lv_color_hex(0xABC1ED), LV_PART_MAIN | LV_STATE_DEFAULT );
 lv_obj_set_style_text_opa(ui_BTN_Reset1, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
@@ -659,6 +659,33 @@ lv_obj_set_style_img_recolor_opa(ui_Arrow_Z_Down3, 255, LV_PART_MAIN| LV_STATE_D
 lv_obj_set_style_img_recolor(ui_Arrow_Z_Down3, lv_color_hex(0x00D2FF), LV_PART_MAIN| LV_STATE_CHECKED);
 lv_obj_set_style_img_recolor_opa(ui_Arrow_Z_Down3, 255, LV_PART_MAIN| LV_STATE_CHECKED);
 
+ui_BTN_Reset2 = lv_imgbtn_create(ui_S1_Content_Panel4);
+lv_imgbtn_set_src(ui_BTN_Reset2, LV_IMGBTN_STATE_RELEASED, NULL, &ui_img_btn_main_off_png, NULL);
+lv_imgbtn_set_src(ui_BTN_Reset2, LV_IMGBTN_STATE_PRESSED, NULL, &ui_img_btn_main_on_png, NULL);
+lv_imgbtn_set_src(ui_BTN_Reset2, LV_IMGBTN_STATE_CHECKED_PRESSED, NULL, &ui_img_btn_main_on_png, NULL);
+lv_imgbtn_set_src(ui_BTN_Reset2, LV_IMGBTN_STATE_CHECKED_RELEASED, NULL, &ui_img_btn_main_on_png, NULL);
+lv_obj_set_height( ui_BTN_Reset2, 66);
+lv_obj_set_width( ui_BTN_Reset2, LV_SIZE_CONTENT);  /// 100
+lv_obj_set_x( ui_BTN_Reset2, -28 );
+lv_obj_set_y( ui_BTN_Reset2, 247 );
+lv_obj_set_align( ui_BTN_Reset2, LV_ALIGN_TOP_RIGHT );
+lv_obj_add_flag( ui_BTN_Reset2, LV_OBJ_FLAG_CHECKABLE );   /// Flags
+lv_obj_set_style_text_color(ui_BTN_Reset2, lv_color_hex(0xABC1ED), LV_PART_MAIN | LV_STATE_DEFAULT );
+lv_obj_set_style_text_opa(ui_BTN_Reset2, 255, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_text_color(ui_BTN_Reset2, lv_color_hex(0x00B9FF), LV_PART_MAIN | LV_STATE_CHECKED );
+lv_obj_set_style_text_opa(ui_BTN_Reset2, 255, LV_PART_MAIN| LV_STATE_CHECKED);
+lv_obj_set_style_text_color(ui_BTN_Reset2, lv_color_hex(0x06CEFB), LV_PART_MAIN | LV_STATE_PRESSED );
+lv_obj_set_style_text_opa(ui_BTN_Reset2, 255, LV_PART_MAIN| LV_STATE_PRESSED);
+
+ui_Label_Reset1 = lv_label_create(ui_BTN_Reset2);
+lv_obj_set_width( ui_Label_Reset1, LV_SIZE_CONTENT);  /// 1
+lv_obj_set_height( ui_Label_Reset1, LV_SIZE_CONTENT);   /// 1
+lv_obj_set_align( ui_Label_Reset1, LV_ALIGN_CENTER );
+lv_label_set_text(ui_Label_Reset1,"异常自动停止");
+lv_label_set_recolor(ui_Label_Reset1,"true");
+lv_obj_set_style_text_align(ui_Label_Reset1, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN| LV_STATE_DEFAULT);
+lv_obj_set_style_text_font(ui_Label_Reset1, &ui_font_chinese18, LV_PART_MAIN| LV_STATE_DEFAULT);
+
 ui_Display_Pos_XY2 = lv_obj_create(ui_Screen_2_Move1);
 lv_obj_set_width( ui_Display_Pos_XY2, 283);
 lv_obj_set_height( ui_Display_Pos_XY2, 79);
@@ -825,6 +852,8 @@ ui_BTN_Image_Top3= NULL;
 ui_Label_Z_Position_4= NULL;
 ui_Arrow_Z_up3= NULL;
 ui_Arrow_Z_Down3= NULL;
+ui_BTN_Reset2= NULL;
+ui_Label_Reset1= NULL;
 ui_Display_Pos_XY2= NULL;
 ui_DP7= NULL;
 ui_Label_X_Position2= NULL;
