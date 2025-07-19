@@ -164,6 +164,16 @@ if ( event_code == LV_EVENT_CLICKED) {
 }
 }
 
+// 异常自动停止按钮事件处理
+void ui_event_BTN_Reset2( lv_event_t * e) {
+    lv_event_code_t event_code = lv_event_get_code(e);
+
+if ( event_code == LV_EVENT_CLICKED) {
+      extern void npwt_ui_handle_auto_stop_button_clicked(void);
+      npwt_ui_handle_auto_stop_button_clicked();
+}
+}
+
 // build funtions
 
 void ui_Screen_2_Move1_screen_init(void)
@@ -806,6 +816,7 @@ lv_obj_add_event_cb(ui_GLOW_11, ui_event_GLOW_11, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_GLOW_12, ui_event_GLOW_12, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_Roller7, ui_event_Roller_Mode, LV_EVENT_ALL, NULL);
 lv_obj_add_event_cb(ui_BTN_Reset1, ui_event_BTN_Save, LV_EVENT_ALL, NULL);
+lv_obj_add_event_cb(ui_BTN_Reset2, ui_event_BTN_Reset2, LV_EVENT_ALL, NULL);
 
 }
 

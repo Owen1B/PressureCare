@@ -45,6 +45,46 @@ const char* npwt_ui_get_mode_string(npwt_mode_t mode);
 void npwt_ui_format_pressure(int16_t pressure, char* buffer, size_t buffer_size);
 void npwt_ui_format_time(uint8_t minutes, char* buffer, size_t buffer_size);
 
+// 系统状态相关
+typedef enum {
+    NPWT_SYSTEM_STATUS_INIT = 0,      // 系统初始化中
+    NPWT_SYSTEM_STATUS_READY,         // 准备就绪
+    NPWT_SYSTEM_STATUS_RUNNING,       // 正常运行中
+    NPWT_SYSTEM_STATUS_I2C_ERROR,     // I2C异常
+    NPWT_SYSTEM_STATUS_PCA9685_ERROR, // PCA9685异常
+    NPWT_SYSTEM_STATUS_LEAK,          // 敷料漏气
+    NPWT_SYSTEM_STATUS_BLOCKAGE,      // 管道堵塞
+} npwt_system_status_t;
+
+// 异常检测相关
+typedef struct {
+    uint32_t leak_detection_start;    // 漏气检测开始时间(ms)
+    uint32_t blockage_detection_start; // 堵塞检测开始时间(ms)
+    bool auto_stop_enabled;           // 是否开启异常自动停止
+    npwt_system_status_t current_status; // 当前系统状态
+} npwt_anomaly_detection_t;
+
+// 全局异常检测状态
+extern npwt_anomaly_detection_t g_anomaly_detection;
+
+// 周期进度相关函数
+uint8_t npwt_ui_get_cycle_progress(void);
+void npwt_ui_update_cycle_progress(void);
+
+// 系统状态相关函数
+const char* npwt_ui_get_status_string(npwt_system_status_t status);
+lv_color_t npwt_ui_get_status_color(npwt_system_status_t status);
+void npwt_ui_update_system_status(void);
+void npwt_ui_set_system_status(npwt_system_status_t status);
+
+// 异常检测函数
+void npwt_ui_check_anomalies(void);
+void npwt_ui_handle_auto_stop_button_clicked(void);
+bool npwt_ui_get_auto_stop_enabled(void);
+void npwt_ui_set_auto_stop_enabled(bool enabled);
+void npwt_ui_anomaly_detection_init(void);
+void npwt_ui_update_auto_stop_button(void);
+
 // 临时设置变量 (用于设置界面)
 extern npwt_settings_t temp_settings;
 extern bool settings_modified;
