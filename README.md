@@ -336,6 +336,6 @@ graph TB
 
 *基于ESP32-S3的下一代NPWT治疗设备*
 
-**[⭐ 给项目加星标](https://github.com/username/THU-NPWT) | [🐛 报告问题](https://github.com/username/THU-NPWT/issues) | [💡 功能建议](https://github.com/username/THU-NPWT/discussions)**
+**[⭐ 给项目加星标](https://github.com/Owen1B/THU-NPWT) | [🐛 报告问题](https://github.com/Owen1B/THU-NPWT/issues) | [💡 功能建议](https://github.com/Owen1B/THU-NPWT/discussions)**
 
 </div>
