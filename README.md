@@ -21,81 +21,42 @@
 
 ## 🏗️ 系统整体框架
 
-### 4层架构设计
+### 系统架构设计
 
 ```mermaid
 graph TB
-    subgraph "🏥 应用层"
-        A[NPWT核心控制器<br/>PID算法 + 安全系统]
-    end
+    A[🏥 NPWT医疗应用]
+    B[💻 触摸界面层]
+    C[🔧 ESP32-S3硬件]
 
-    subgraph "💻 界面层"  
-        U[医疗UI界面<br/>触摸控制 + 实时显示]
-    end
-
-    subgraph "🎨 图形层"
-        L[LVGL显示框架<br/>800×480触摸屏]
-    end
+    A ---|控制指令| B
+    B ---|硬件驱动| C
+    C -.->|传感器数据| A
     
-    subgraph "🔧 硬件层"
-        H[ESP32-S3平台<br/>LCD + 触摸 + PWM + 传感器]
-    end
-
-    %% 主要数据流
-    A ---|业务逻辑| U
-    U ---|界面渲染| L  
-    L ---|硬件驱动| H
-    
-    %% 反馈控制流
-    H -.->|传感器数据| A
-    A -.->|PWM控制| H
-    
-    style A fill:#ff6b6b,stroke:#d63031,stroke-width:3px,color:#fff
-    style U fill:#4ecdc4,stroke:#00b894,stroke-width:3px,color:#fff  
-    style L fill:#45b7d1,stroke:#0984e3,stroke-width:3px,color:#fff
-    style H fill:#96ceb4,stroke:#00b894,stroke-width:3px,color:#fff
+    style A fill:#ff6b6b,stroke-width:4px,color:#fff
+    style B fill:#4ecdc4,stroke-width:4px,color:#fff  
+    style C fill:#96ceb4,stroke-width:4px,color:#fff
 ```
-
-#### 🔍 架构说明
-
-| 层次 | 主要功能 | 核心组件 |
-|:---:|---------|---------|
-| **🏥 应用层** | 医疗设备核心逻辑 | NPWT控制器、PID算法、安全检测系统 |
-| **💻 界面层** | 用户交互界面 | 触摸控制器、实时显示器、参数设置界面 |  
-| **🎨 图形层** | 显示渲染引擎 | LVGL图形库、防撕裂技术、多缓冲机制 |
-| **🔧 硬件层** | 底层硬件驱动 | LCD驱动器、PWM控制器、压力传感器 |
 
 ### 系统数据流向图
 
 ```mermaid
 graph LR
-    A[👨‍⚕️ 用户触控界面<br/>参数设置操作] 
-    B[🎯 PID控制器<br/>压力精密调节]
-    C[💨 负压泵系统<br/>PWM精确驱动]
-    D[🏥 治疗接口<br/>负压疗法输出]
-    E[📊 压力传感器<br/>实时数据采集] 
-    F[📱 状态显示器<br/>运行状态反馈]
+    A[👨‍⚕️ 用户界面] 
+    B[🎯 PID控制器]
+    C[💨 负压泵]
+    D[📊 压力传感器] 
     
-    A -->|控制指令| B
-    B -->|PWM信号| C  
+    A -->|设置参数| B
+    B -->|PWM控制| C  
     C -->|负压输出| D
-    D -->|压力反馈| E
-    E -->|数据回传| B
-    E -->|状态信息| F
-    F -->|用户反馈| A
+    D -->|数据反馈| B
+    D -->|状态显示| A
     
-    %% 安全保护系统
-    G[🛡️ 安全监控器<br/>异常检测保护]
-    G -.->|保护控制| C
-    E -.->|监测数据| G
-    
-    style A fill:#4CAF50,color:#fff
-    style B fill:#FF9800,color:#fff  
-    style C fill:#E91E63,color:#fff
-    style D fill:#F44336,color:#fff
-    style E fill:#9C27B0,color:#fff
-    style F fill:#2196F3,color:#fff
-    style G fill:#607D8B,color:#fff
+    style A fill:#4CAF50,color:#fff,stroke-width:3px
+    style B fill:#FF9800,color:#fff,stroke-width:3px  
+    style C fill:#E91E63,color:#fff,stroke-width:3px
+    style D fill:#9C27B0,color:#fff,stroke-width:3px
 ```
 
 #### 💡 核心流程
