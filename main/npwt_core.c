@@ -227,9 +227,6 @@ static void npwt_control_task(void *pvParameters) {
                 case NPWT_MODE_INTERMITTENT:
                     npwt_mode_intermittent_run();
                     break;
-                case NPWT_MODE_DYNAMIC:
-                    npwt_mode_dynamic_run();
-                    break;
             }
 
             // 安全检查
@@ -414,14 +411,6 @@ int16_t npwt_adc_read_pressure(void) {
     // 四舍五入到最接近的1kPa
     int16_t rounded_pressure = (int16_t)(filtered_pressure_kpa + (filtered_pressure_kpa >= 0 ? 0.5f : -0.5f));
 
-    // 限制压力范围
-    if (rounded_pressure < NPWT_PRESSURE_MIN) {
-        rounded_pressure = NPWT_PRESSURE_MIN;
-    }
-    if (rounded_pressure > NPWT_PRESSURE_MAX) {
-        rounded_pressure = NPWT_PRESSURE_MAX;
-    }
-
     static uint32_t last_log_time = 0;
     uint32_t current_time = esp_timer_get_time() / 1000; // 转换为毫秒
 
@@ -474,10 +463,10 @@ esp_err_t npwt_pid_init(npwt_pid_t *pid) {
     if (!pid) return ESP_ERR_INVALID_ARG;
 
     // PID参数 - 反向PWM控制（100%=停止，60%=最快）
-    // 调整为较慢响应，3-5秒内平稳达到目标负压
-    pid->kp = 8.0f;     // 降低比例系数，减慢响应速度
-    pid->ki = 0.5f;     // 降低积分系数，减少积分累积
-    pid->kd = 0.2f;     // 降低微分系数，减少震荡
+    // 调整为快速响应，1-2秒内快速达到目标负压
+    pid->kp = 20.0f;    // 提高比例系数，加快响应速度
+    pid->ki = 2.0f;     // 提高积分系数，更快消除稳态误差
+    pid->kd = 1.0f;     // 适度微分系数，减少超调
 
     pid->integral = 0.0f;
     pid->prev_error = 0.0f;
@@ -552,8 +541,10 @@ void npwt_reset_pwm_test_mode(void) {
 esp_err_t npwt_mode_continuous_run(void) {
     // 首次进入工作模式时重置PID（从IDLE状态切换时）
     if (g_npwt_system.realtime.state == NPWT_STATE_IDLE) {
-        npwt_pid_reset(&g_npwt_system.pid);
-        ESP_LOGI(TAG, "Entering continuous mode, PID reset");
+        // 根据启动PWM计算对应的PID输出值
+        float initial_pid_output = NPWT_PWM_WORKING_MAX - NPWT_PWM_STARTUP;
+        npwt_pid_reset_with_initial(&g_npwt_system.pid, initial_pid_output);
+        ESP_LOGI(TAG, "Entering continuous mode, PID reset with initial output: %.1f", initial_pid_output);
     }
     
     g_npwt_system.realtime.state = NPWT_STATE_WORKING;
@@ -621,7 +612,9 @@ esp_err_t npwt_mode_intermittent_run(void) {
             g_npwt_system.realtime.state = NPWT_STATE_WORKING;
             g_npwt_system.realtime.work_elapsed = 0;
             g_npwt_system.realtime.rest_elapsed = 0;
-            npwt_pid_reset(&g_npwt_system.pid);
+            // 从休息状态切换到工作状态时也使用初始值重置PID
+            float initial_pid_output = NPWT_PWM_WORKING_MAX - NPWT_PWM_STARTUP;
+            npwt_pid_reset_with_initial(&g_npwt_system.pid, initial_pid_output);
         } else {
             // 继续休息
             npwt_pwm_set_duty(4095);   // 100%占空比 = 泵停止
@@ -632,95 +625,19 @@ esp_err_t npwt_mode_intermittent_run(void) {
             g_npwt_system.realtime.state = NPWT_STATE_WORKING;
             g_npwt_system.realtime.work_elapsed = 0;
             g_npwt_system.realtime.rest_elapsed = 0;
-            npwt_pid_reset(&g_npwt_system.pid);
+            // 根据启动PWM计算对应的PID输出值
+            float initial_pid_output = NPWT_PWM_WORKING_MAX - NPWT_PWM_STARTUP;
+            npwt_pid_reset_with_initial(&g_npwt_system.pid, initial_pid_output);
             // 设置初始PWM占空比
             g_npwt_system.realtime.pump_pwm = NPWT_PWM_STARTUP;
             npwt_pwm_set_duty(NPWT_PWM_STARTUP);
-            ESP_LOGI(TAG, "Intermittent mode started, PID reset, initial PWM set");
+            ESP_LOGI(TAG, "Intermittent mode started, PID reset with initial output: %.1f, initial PWM set", initial_pid_output);
         }
     }
 
     return ESP_OK;
 }
 
-// 动态模式运行 (斜坡下降)
-esp_err_t npwt_mode_dynamic_run(void) {
-    uint32_t work_time_sec = g_npwt_system.settings.work_time * 60;
-    uint32_t rest_time_sec = g_npwt_system.settings.rest_time * 60;
-
-    if (g_npwt_system.realtime.state == NPWT_STATE_WORKING) {
-        if (g_npwt_system.realtime.work_elapsed >= work_time_sec) {
-            // 切换到休息状态
-            g_npwt_system.realtime.state = NPWT_STATE_RESTING;
-            g_npwt_system.realtime.work_elapsed = 0;
-            g_npwt_system.realtime.rest_elapsed = 0;
-        } else {
-            // 工作阶段：从目标压力逐渐上升到0
-            float progress = (float)g_npwt_system.realtime.work_elapsed / work_time_sec;
-            float ramp_target = g_npwt_system.settings.target_pressure * (1.0f - progress);
-
-            // 每10秒输出一次dynamic work日志
-            if (g_npwt_system.realtime.work_elapsed % 10 == 0) {
-                ESP_LOGI(TAG, "Dynamic WORK: elapsed=%lu, progress=%.2f, target=%.1f",
-                    g_npwt_system.realtime.work_elapsed, progress, ramp_target);
-            }
-
-            float pid_output = npwt_pid_calculate(
-                &g_npwt_system.pid,
-                ramp_target,
-                g_npwt_system.realtime.current_pressure
-            );
-            // 反向PWM控制（与持续模式统一）
-            uint16_t pwm_duty = NPWT_PWM_WORKING_MAX - (uint16_t)pid_output;
-            if (pwm_duty > NPWT_PWM_WORKING_MAX) pwm_duty = NPWT_PWM_WORKING_MAX;
-            if (pwm_duty < NPWT_PWM_WORKING_MIN) pwm_duty = NPWT_PWM_WORKING_MIN;
-            npwt_pwm_set_duty(pwm_duty);
-        }
-    } else if (g_npwt_system.realtime.state == NPWT_STATE_RESTING) {
-        if (g_npwt_system.realtime.rest_elapsed >= rest_time_sec) {
-            // 切换到工作状态
-            g_npwt_system.realtime.state = NPWT_STATE_WORKING;
-            g_npwt_system.realtime.work_elapsed = 0;
-            g_npwt_system.realtime.rest_elapsed = 0;
-            npwt_pid_reset(&g_npwt_system.pid);
-        } else {
-            // 休息阶段：从0逐渐下降到目标压力
-            float progress = (float)g_npwt_system.realtime.rest_elapsed / rest_time_sec;
-            float ramp_target = g_npwt_system.settings.target_pressure * progress;
-
-            // 每10秒输出一次dynamic rest日志
-            if (g_npwt_system.realtime.rest_elapsed % 10 == 0) {
-                ESP_LOGI(TAG, "Dynamic REST: elapsed=%lu, progress=%.2f, target=%.1f",
-                    g_npwt_system.realtime.rest_elapsed, progress, ramp_target);
-            }
-
-            float pid_output = npwt_pid_calculate(
-                &g_npwt_system.pid,
-                ramp_target,
-                g_npwt_system.realtime.current_pressure
-            );
-            // 反向PWM控制（与持续模式统一）
-            uint16_t pwm_duty = NPWT_PWM_WORKING_MAX - (uint16_t)pid_output;
-            if (pwm_duty > NPWT_PWM_WORKING_MAX) pwm_duty = NPWT_PWM_WORKING_MAX;
-            if (pwm_duty < NPWT_PWM_WORKING_MIN) pwm_duty = NPWT_PWM_WORKING_MIN;
-            npwt_pwm_set_duty(pwm_duty);
-        }
-    } else {
-        // 初始状态，开始工作 (只在第一次进入时重置PID)
-        if (g_npwt_system.realtime.state == NPWT_STATE_IDLE) {
-            g_npwt_system.realtime.state = NPWT_STATE_WORKING;
-            g_npwt_system.realtime.work_elapsed = 0;
-            g_npwt_system.realtime.rest_elapsed = 0;
-            npwt_pid_reset(&g_npwt_system.pid);
-            // 设置初始PWM占空比
-            g_npwt_system.realtime.pump_pwm = NPWT_PWM_STARTUP;
-            npwt_pwm_set_duty(NPWT_PWM_STARTUP);
-            ESP_LOGI(TAG, "Dynamic mode started, PID reset, initial PWM set");
-        }
-    }
-
-    return ESP_OK;
-}
 
 // 安全检查
 bool npwt_safety_check(void) {
@@ -980,25 +897,9 @@ void npwt_register_ui_callback(void (*callback)(void)) {
     g_npwt_system.ui_update_callback = callback;
 }
 
-// 获取当前目标压力（动态模式下会变化）
+// 获取当前目标压力
 int16_t npwt_get_current_target_pressure(void) {
-    if (g_npwt_system.settings.mode == NPWT_MODE_DYNAMIC) {
-        if (g_npwt_system.realtime.state == NPWT_STATE_WORKING) {
-            // 工作阶段：从目标压力逐渐上升到0
-            uint32_t work_time_sec = g_npwt_system.settings.work_time * 60;
-            float progress = (float)g_npwt_system.realtime.work_elapsed / work_time_sec;
-            float ramp_target = g_npwt_system.settings.target_pressure * (1.0f - progress);
-
-            return (int16_t)ramp_target;
-        } else if (g_npwt_system.realtime.state == NPWT_STATE_RESTING) {
-            // 休息阶段：从0逐渐下降到目标压力
-            uint32_t rest_time_sec = g_npwt_system.settings.rest_time * 60;
-            float progress = (float)g_npwt_system.realtime.rest_elapsed / rest_time_sec;
-            float ramp_target = g_npwt_system.settings.target_pressure * progress;
-
-            return (int16_t)ramp_target;
-        }
-    } else if (g_npwt_system.settings.mode == NPWT_MODE_INTERMITTENT) {
+    if (g_npwt_system.settings.mode == NPWT_MODE_INTERMITTENT) {
         // 间歇模式：工作阶段返回设定压力，休息阶段返回0
         if (g_npwt_system.realtime.state == NPWT_STATE_WORKING) {
             return g_npwt_system.settings.target_pressure;

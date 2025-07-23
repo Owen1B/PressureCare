@@ -18,7 +18,7 @@ extern "C" {
 
 // 系统配置常量
 #define NPWT_PRESSURE_MIN           -30     // 最小负压值 (kPa)
-#define NPWT_PRESSURE_MAX           0       // 最大负压值 (kPa)
+#define NPWT_PRESSURE_MAX           -10     // 最大负压值 (kPa)
 #define NPWT_PRESSURE_STEP          -1      // 负压调节步长 (kPa)
 #define NPWT_PRESSURE_DEFAULT       -16     // 默认负压值 (kPa, 约-120mmHg)
 
@@ -45,8 +45,7 @@ extern "C" {
 // 工作模式枚举
 typedef enum {
     NPWT_MODE_CONTINUOUS = 0,   // 持续模式
-    NPWT_MODE_INTERMITTENT,     // 间歇模式
-    NPWT_MODE_DYNAMIC          // 动态模式
+    NPWT_MODE_INTERMITTENT      // 间歇模式
 } npwt_mode_t;
 
 // 系统状态枚举
@@ -170,7 +169,6 @@ float npwt_kalman_update(npwt_kalman_t *kalman, float measurement);
 // 工作模式控制
 esp_err_t npwt_mode_continuous_run(void);
 esp_err_t npwt_mode_intermittent_run(void);
-esp_err_t npwt_mode_dynamic_run(void);
 
 // 安全检查
 bool npwt_safety_check(void);

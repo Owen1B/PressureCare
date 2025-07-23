@@ -131,7 +131,7 @@ void npwt_ui_update_settings_panel(void) {
     // 优先使用临时设置（如果用户正在修改设置），否则使用系统设置
     npwt_settings_t settings = settings_modified ? temp_settings : npwt_get_settings();
 
-    // 更新当前目标负压 (ui_Label_Head_Temp2显示当前目标压力值，动态模式下会变化)
+    // 更新当前目标负压 (ui_Label_Head_Temp2显示当前目标压力值，间歇模式下会变化)
     char pressure_str[16];
     int16_t current_target = npwt_get_current_target_pressure();
     npwt_ui_format_pressure(current_target, pressure_str, sizeof(pressure_str));
@@ -221,7 +221,7 @@ void npwt_ui_handle_power_button_clicked(void) {
         // 开启电源时，设置为正常运行状态
         npwt_ui_set_system_status(NPWT_SYSTEM_STATUS_RUNNING);
     } else {
-        // 关闭电源时，重置到准备就绪状态
+        // 手动关闭电源时，清除所有状态回到准备就绪
         npwt_ui_set_system_status(NPWT_SYSTEM_STATUS_READY);
         // 清除异常检测计时器
         g_anomaly_detection.leak_detection_start = 0;
@@ -296,8 +296,8 @@ void npwt_ui_handle_rest_time_adjust(int8_t delta) {
 }
 
 void npwt_ui_handle_mode_switch(void) {
-    // 循环切换模式
-    temp_settings.mode = (temp_settings.mode + 1) % 3;
+    // 循环切换模式（只有持续模式和间歇模式）
+    temp_settings.mode = (temp_settings.mode + 1) % 2;
     settings_modified = true;
     npwt_ui_force_update(); // 强制立即更新UI
 
@@ -338,8 +338,6 @@ const char* npwt_ui_get_mode_string(npwt_mode_t mode) {
             return "持续模式";
         case NPWT_MODE_INTERMITTENT:
             return "间歇模式";
-        case NPWT_MODE_DYNAMIC:
-            return "动态模式";
         default:
             return "未知模式";
     }
@@ -373,8 +371,7 @@ uint8_t npwt_ui_get_cycle_progress(void) {
             // 持续模式一直保持100%
             return 100;
             
-        case NPWT_MODE_INTERMITTENT:
-        case NPWT_MODE_DYNAMIC: {
+        case NPWT_MODE_INTERMITTENT: {
             uint32_t work_time_sec = settings.work_time * 60;
             uint32_t rest_time_sec = settings.rest_time * 60;
             uint32_t total_cycle_sec = work_time_sec + rest_time_sec;
@@ -471,7 +468,12 @@ void npwt_ui_check_anomalies(void) {
         g_anomaly_detection.leak_detection_start = 0;
         g_anomaly_detection.blockage_detection_start = 0;
         g_anomaly_detection.system_start_time = 0;
-        g_anomaly_detection.current_status = NPWT_SYSTEM_STATUS_READY;  // 关机后回到准备就绪
+        
+        // 如果不是异常状态，则设为准备就绪；如果是异常状态，保持异常显示
+        if (g_anomaly_detection.current_status != NPWT_SYSTEM_STATUS_LEAK && 
+            g_anomaly_detection.current_status != NPWT_SYSTEM_STATUS_BLOCKAGE) {
+            g_anomaly_detection.current_status = NPWT_SYSTEM_STATUS_READY;
+        }
         return;
     }
     
@@ -495,18 +497,15 @@ void npwt_ui_check_anomalies(void) {
         return;
     }
     
-    // 漏气检测: 如果正常运行时，系统的负压一直维持在-3到0kPa，同时设定的负压小于-5
-    bool leak_condition = (realtime.current_pressure >= -3 && realtime.current_pressure <= 0) && 
-                         (settings.target_pressure < -5);
+    // 漏气检测: 如果正常运行时，系统的负压一直维持在-5到0kPa，同时设定的负压小于-10kPa
+    bool leak_condition = (realtime.current_pressure >= -5 && realtime.current_pressure <= 0) && 
+                         (settings.target_pressure < -10);
     
     if (leak_condition) {
         if (g_anomaly_detection.leak_detection_start == 0) {
             g_anomaly_detection.leak_detection_start = current_time;
         } else if (current_time - g_anomaly_detection.leak_detection_start >= 5000) { // 5秒
-            // 检测到漏气
-            npwt_ui_set_system_status(NPWT_SYSTEM_STATUS_LEAK);
-            
-            // 如果开启了自动停止，关闭电源
+            // 如果开启了自动停止，先关闭电源
             if (g_anomaly_detection.auto_stop_enabled) {
                 npwt_set_power(false);
                 // 取消主界面电源按钮的checked状态
@@ -516,6 +515,9 @@ void npwt_ui_check_anomalies(void) {
                 }
                 ESP_LOGW(TAG, "Leak detected - auto stopping pump");
             }
+            
+            // 设置漏气状态（这样即使停机后也能保持显示）
+            npwt_ui_set_system_status(NPWT_SYSTEM_STATUS_LEAK);
         }
     } else {
         g_anomaly_detection.leak_detection_start = 0;
@@ -528,19 +530,9 @@ void npwt_ui_check_anomalies(void) {
         if (g_anomaly_detection.blockage_detection_start == 0) {
             g_anomaly_detection.blockage_detection_start = current_time;
         } else if (current_time - g_anomaly_detection.blockage_detection_start >= 5000) { // 5秒
-            // 检测到堵塞
+            // 检测到堵塞，仅报警不停止运行
             npwt_ui_set_system_status(NPWT_SYSTEM_STATUS_BLOCKAGE);
-            
-            // 如果开启了自动停止，关闭电源
-            if (g_anomaly_detection.auto_stop_enabled) {
-                npwt_set_power(false);
-                // 取消主界面电源按钮的checked状态
-                extern lv_obj_t *ui_BTN_Pause_Top1;
-                if (ui_BTN_Pause_Top1) {
-                    lv_obj_clear_state(ui_BTN_Pause_Top1, LV_STATE_CHECKED);
-                }
-                ESP_LOGW(TAG, "Blockage detected - auto stopping pump");
-            }
+            ESP_LOGW(TAG, "Blockage detected - alarm only, system continues running");
         }
     } else {
         g_anomaly_detection.blockage_detection_start = 0;
