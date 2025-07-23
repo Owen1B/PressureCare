@@ -25,17 +25,25 @@
 
 ```mermaid
 graph TB
-    A[🏥 NPWT医疗应用]
-    B[💻 触摸界面层]
-    C[🔧 ESP32-S3硬件]
+    subgraph "🏥 医疗应用层"
+        A[NPWT核心控制<br/>PID算法·安全系统]
+    end
 
-    A ---|控制指令| B
-    B ---|硬件驱动| C
-    C -.->|传感器数据| A
+    subgraph "💻 用户界面层"  
+        U[触摸UI界面<br/>参数设置·状态显示]
+    end
     
-    style A fill:#ff6b6b,stroke-width:4px,color:#fff
-    style B fill:#4ecdc4,stroke-width:4px,color:#fff  
-    style C fill:#96ceb4,stroke-width:4px,color:#fff
+    subgraph "🔧 硬件驱动层"
+        H[ESP32-S3平台<br/>LCD·PWM·传感器]
+    end
+
+    A ---|业务逻辑| U
+    U ---|硬件驱动| H
+    H -.->|传感器数据| A
+    
+    style A fill:#ff6b6b,stroke-width:3px,color:#fff
+    style U fill:#4ecdc4,stroke-width:3px,color:#fff  
+    style H fill:#96ceb4,stroke-width:3px,color:#fff
 ```
 
 ### 系统数据流向图
