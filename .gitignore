@@ -1,27 +1,25 @@
-# ESP-IDF build files
+# ESP-IDF build artifacts
 build/
 sdkconfig
 sdkconfig.old
-
-# Managed components (auto-downloaded)
 managed_components/
-
-# Dependencies lock file (auto-generated)
-dependencies.lock
-
-# Python cache
-__pycache__/
-*.pyc
 
 # VS Code settings
 .vscode/
 
-# macOS files
-.DS_Store
+# IDE files
+*.swp
+*.swo
+*~
 
-# Backup files
-*.bak
-*.backup
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
 
 # Log files
 *.log
@@ -29,3 +27,21 @@ __pycache__/
 # Temporary files
 *.tmp
 *.temp
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Component manager locks (keep dependencies.lock for reproducible builds)
+# dependencies.lock
+
+# Flash download tool
+flash_project_args
+
+# Core dumps
+core
+
+# Local environment variables
+.env
+EOF < /dev/null

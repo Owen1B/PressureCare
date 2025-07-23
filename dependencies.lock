@@ -1,0 +1,31 @@
+dependencies:
+  espressif/esp_lcd_touch:
+    dependencies: []
+    source:
+      path: /Users/owen/Downloads/ESP32-S3-Touch-LCD-4.3-Demo 4/ESP-IDF/08_lvgl_Porting/components/espressif__esp_lcd_touch
+      type: local
+    version: 1.1.2
+  espressif/esp_lcd_touch_gt911:
+    dependencies: []
+    source:
+      path: /Users/owen/Downloads/ESP32-S3-Touch-LCD-4.3-Demo 4/ESP-IDF/08_lvgl_Porting/components/espressif__esp_lcd_touch_gt911
+      type: local
+    version: 1.1.1~1
+  idf:
+    source:
+      type: idf
+    version: 6.0.0
+  lvgl/lvgl:
+    dependencies: []
+    source:
+      path: /Users/owen/Downloads/ESP32-S3-Touch-LCD-4.3-Demo 4/ESP-IDF/08_lvgl_Porting/components/lvgl__lvgl
+      type: local
+    version: 8.4.0
+direct_dependencies:
+- espressif/esp_lcd_touch
+- espressif/esp_lcd_touch_gt911
+- idf
+- lvgl/lvgl
+manifest_hash: 59aac4a4ab9e01e1f75381fb4db3ff6ed7a04758eacd817d9d8cc62b3a12c7e2
+target: esp32s3
+version: 2.0.0
