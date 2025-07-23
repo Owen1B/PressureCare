@@ -235,14 +235,13 @@ graph TB
     E -->|堵塞<-30kPa| H[堵塞报警]
     
     G --> I[自动停机]
-    H --> J[继续运行]
+    H --> I[自动停机]
     F --> D
-    J --> D
     
     style C fill:#FFC107,color:#000
     style F fill:#4CAF50,color:#fff
     style G fill:#F44336,color:#fff
-    style H fill:#FF9800,color:#fff
+    style H fill:#F44336,color:#fff
     style I fill:#F44336,color:#fff
 ```
 
@@ -251,7 +250,7 @@ graph TB
 | 异常类型 | 检测条件 | 响应动作 | 恢复方式 |
 |:---:|:---:|:---:|:---:|
 | **🚨 敷料漏气** | 压力-5~0kPa·目标<-10kPa·持续5秒 | 报警+自动停机 | 手动重启 |
-| **🚧 管道堵塞** | 压力<-30kPa·持续5秒 | 仅报警提醒 | 自动清除 |
+| **🚧 管道堵塞** | 压力<-30kPa·持续5秒 | 报警+自动停机 | 手动重启 |
 | **⏱️ 启动保护** | 开机后30秒内 | 暂停检测 | 自动恢复 |
 
 ## 📊 技术规格
