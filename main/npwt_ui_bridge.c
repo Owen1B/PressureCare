@@ -164,7 +164,7 @@ void npwt_ui_update_settings_screen(void) {
     npwt_ui_update_work_time_setting(temp_settings.work_time);
     npwt_ui_update_rest_time_setting(temp_settings.rest_time);
     npwt_ui_update_mode_setting(temp_settings.mode);
-    
+
     // 更新异常自动停止按钮状态
     npwt_ui_update_auto_stop_button();
 }
@@ -360,24 +360,24 @@ void npwt_ui_format_time(uint8_t minutes, char* buffer, size_t buffer_size) {
 uint8_t npwt_ui_get_cycle_progress(void) {
     npwt_realtime_t realtime = npwt_get_realtime_data();
     npwt_settings_t settings = npwt_get_settings();
-    
+
     // 如果系统未启动，返回0%
     if (!settings.power_on) {
         return 0;
     }
-    
+
     switch (settings.mode) {
         case NPWT_MODE_CONTINUOUS:
             // 持续模式一直保持100%
             return 100;
-            
+
         case NPWT_MODE_INTERMITTENT: {
             uint32_t work_time_sec = settings.work_time * 60;
             uint32_t rest_time_sec = settings.rest_time * 60;
             uint32_t total_cycle_sec = work_time_sec + rest_time_sec;
-            
+
             if (total_cycle_sec == 0) return 0;
-            
+
             uint32_t current_elapsed;
             if (realtime.state == NPWT_STATE_WORKING) {
                 current_elapsed = realtime.work_elapsed;
@@ -386,13 +386,13 @@ uint8_t npwt_ui_get_cycle_progress(void) {
             } else {
                 return 0;
             }
-            
+
             // 计算周期进度百分比，使用浮点数计算提高精度
             float progress_float = ((float)current_elapsed / (float)total_cycle_sec) * 100.0f;
             uint8_t progress = (uint8_t)(progress_float + 0.5f); // 四舍五入
             return progress > 100 ? 100 : progress;
         }
-        
+
         default:
             return 0;
     }
@@ -446,7 +446,7 @@ void npwt_ui_update_system_status(void) {
     if (ui_Label_Header1) {
         const char* status_str = npwt_ui_get_current_status_string();  // 使用新的倒计时函数
         lv_color_t color = npwt_ui_get_status_color(g_anomaly_detection.current_status);
-        
+
         lv_label_set_text(ui_Label_Header1, status_str);
         lv_obj_set_style_text_color(ui_Label_Header1, color, LV_PART_MAIN | LV_STATE_DEFAULT);
     }
@@ -462,21 +462,21 @@ void npwt_ui_check_anomalies(void) {
     npwt_realtime_t realtime = npwt_get_realtime_data();
     npwt_settings_t settings = npwt_get_settings();
     uint32_t current_time = esp_timer_get_time() / 1000; // 转换为ms
-    
+
     // 只在系统运行时进行状态管理
     if (!settings.power_on) {
         g_anomaly_detection.leak_detection_start = 0;
         g_anomaly_detection.blockage_detection_start = 0;
         g_anomaly_detection.system_start_time = 0;
-        
+
         // 如果不是异常状态，则设为准备就绪；如果是异常状态，保持异常显示
-        if (g_anomaly_detection.current_status != NPWT_SYSTEM_STATUS_LEAK && 
+        if (g_anomaly_detection.current_status != NPWT_SYSTEM_STATUS_LEAK &&
             g_anomaly_detection.current_status != NPWT_SYSTEM_STATUS_BLOCKAGE) {
             g_anomaly_detection.current_status = NPWT_SYSTEM_STATUS_READY;
         }
         return;
     }
-    
+
     // 检查是否在30秒初始化期内
     uint32_t time_since_start = current_time - g_anomaly_detection.system_start_time;
     if (time_since_start < 30000) { // 30秒
@@ -491,16 +491,16 @@ void npwt_ui_check_anomalies(void) {
             g_anomaly_detection.current_status = NPWT_SYSTEM_STATUS_RUNNING;
         }
     }
-    
+
     // 只有在开启异常自动停止时才进行异常检测
     if (!g_anomaly_detection.auto_stop_enabled) {
         return;
     }
-    
+
     // 漏气检测: 如果正常运行时，系统的负压一直维持在-5到0kPa，同时设定的负压小于-10kPa
-    bool leak_condition = (realtime.current_pressure >= -5 && realtime.current_pressure <= 0) && 
+    bool leak_condition = (realtime.current_pressure >= -5 && realtime.current_pressure <= 0) &&
                          (settings.target_pressure < -10);
-    
+
     if (leak_condition) {
         if (g_anomaly_detection.leak_detection_start == 0) {
             g_anomaly_detection.leak_detection_start = current_time;
@@ -515,24 +515,34 @@ void npwt_ui_check_anomalies(void) {
                 }
                 ESP_LOGW(TAG, "Leak detected - auto stopping pump");
             }
-            
+
             // 设置漏气状态（这样即使停机后也能保持显示）
             npwt_ui_set_system_status(NPWT_SYSTEM_STATUS_LEAK);
         }
     } else {
         g_anomaly_detection.leak_detection_start = 0;
     }
-    
-    // 堵塞检测: 如果传感器读取的负压一直小于-32kPa
-    bool blockage_condition = realtime.current_pressure < -32;
-    
+
+    // 堵塞检测: 如果传感器读取的负压一直小于-30kPa
+    bool blockage_condition = realtime.current_pressure < -30;
+
     if (blockage_condition) {
         if (g_anomaly_detection.blockage_detection_start == 0) {
             g_anomaly_detection.blockage_detection_start = current_time;
         } else if (current_time - g_anomaly_detection.blockage_detection_start >= 5000) { // 5秒
-            // 检测到堵塞，仅报警不停止运行
+            // 如果开启了自动停止，先关闭电源
+            if (g_anomaly_detection.auto_stop_enabled) {
+                npwt_set_power(false);
+                // 取消主界面电源按钮的checked状态
+                extern lv_obj_t *ui_BTN_Pause_Top1;
+                if (ui_BTN_Pause_Top1) {
+                    lv_obj_clear_state(ui_BTN_Pause_Top1, LV_STATE_CHECKED);
+                }
+                ESP_LOGW(TAG, "Blockage detected - auto stopping pump");
+            }
+
+            // 设置堵塞状态（这样即使停机后也能保持显示）
             npwt_ui_set_system_status(NPWT_SYSTEM_STATUS_BLOCKAGE);
-            ESP_LOGW(TAG, "Blockage detected - alarm only, system continues running");
         }
     } else {
         g_anomaly_detection.blockage_detection_start = 0;
@@ -541,11 +551,11 @@ void npwt_ui_check_anomalies(void) {
 
 void npwt_ui_handle_auto_stop_button_clicked(void) {
     g_anomaly_detection.auto_stop_enabled = !g_anomaly_detection.auto_stop_enabled;
-    
+
     // 如果关闭了自动停止，且系统正在运行，则重置状态为正常运行
     if (!g_anomaly_detection.auto_stop_enabled) {
         npwt_settings_t settings = npwt_get_settings();
-        if (settings.power_on && (g_anomaly_detection.current_status == NPWT_SYSTEM_STATUS_LEAK || 
+        if (settings.power_on && (g_anomaly_detection.current_status == NPWT_SYSTEM_STATUS_LEAK ||
                                  g_anomaly_detection.current_status == NPWT_SYSTEM_STATUS_BLOCKAGE)) {
             npwt_ui_set_system_status(NPWT_SYSTEM_STATUS_RUNNING);
         }
@@ -553,7 +563,7 @@ void npwt_ui_handle_auto_stop_button_clicked(void) {
         g_anomaly_detection.leak_detection_start = 0;
         g_anomaly_detection.blockage_detection_start = 0;
     }
-    
+
     ESP_LOGI(TAG, "Auto-stop %s", g_anomaly_detection.auto_stop_enabled ? "enabled" : "disabled");
 }
 
@@ -581,7 +591,7 @@ void npwt_ui_anomaly_detection_init(void) {
     g_anomaly_detection.blockage_detection_start = 0;
     g_anomaly_detection.auto_stop_enabled = false;
     g_anomaly_detection.current_status = NPWT_SYSTEM_STATUS_INIT;
-    
+
     // 检查系统初始化状态
     // TODO: 检查I2C和PCA9685状态，设置相应的状态
     g_anomaly_detection.system_start_time = 0;  // 确保初始化时启动时间为0
@@ -593,21 +603,21 @@ int npwt_ui_get_init_remaining_time(void) {
     if (g_anomaly_detection.current_status != NPWT_SYSTEM_STATUS_INIT || g_anomaly_detection.system_start_time == 0) {
         return 0;  // 不在初始化状态或未启动
     }
-    
+
     uint32_t current_time = esp_timer_get_time() / 1000; // 转换为ms
     uint32_t elapsed = current_time - g_anomaly_detection.system_start_time;
-    
+
     if (elapsed >= 30000) {
         return 0;  // 已超过30秒
     }
-    
+
     return (30000 - elapsed) / 1000;  // 返回剩余秒数
 }
 
 // 获取当前状态字符串（包含倒计时）
 const char* npwt_ui_get_current_status_string(void) {
     static char status_buffer[32];  // 静态缓冲区存储状态字符串
-    
+
     if (g_anomaly_detection.current_status == NPWT_SYSTEM_STATUS_INIT) {
         int remaining_time = npwt_ui_get_init_remaining_time();
         if (remaining_time > 0) {
@@ -618,7 +628,7 @@ const char* npwt_ui_get_current_status_string(void) {
     } else {
         strcpy(status_buffer, npwt_ui_get_status_string(g_anomaly_detection.current_status));
     }
-    
+
     return status_buffer;
 }
 

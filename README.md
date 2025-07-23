@@ -19,36 +19,211 @@
 - 📊 **实时监测**: 压力、泵速、工作状态的实时显示和记录
 - 🔧 **专业级硬件**: PCA9685 PWM控制器，GT911触摸控制器
 
-## 🏗️ 系统架构
+## 🏗️ 系统整体框架
 
+### 4层架构设计
+
+```mermaid
+graph TB
+    subgraph "第1层：应用层 - NPWT核心系统"
+        A1[NPWT控制逻辑<br/>npwt_core.c/h]
+        A2[三种工作模式<br/>持续/间歇/动态模式]
+        A3[PID控制算法<br/>精密压力调节]
+        A4[卡尔曼滤波<br/>传感器数据滤波]
+        A5[安全系统<br/>异常检测与报警]
+    end
+
+    subgraph "第2层：UI层 - SquareLine Studio界面"
+        U1[专业医疗界面<br/>squareline_ui/]
+        U2[实时数据显示<br/>压力/流量/密封质量]
+        U3[触摸控制<br/>参数/模式/电源]
+        U4[多语言支持<br/>中文字体与本地化]
+        U5[UI-核心通信<br/>npwt_ui_events.c]
+    end
+
+    subgraph "第3层：LVGL移植层 - 显示框架"
+        L1[高级LVGL集成<br/>LVGL 8.x完整移植]
+        L2[防撕裂技术<br/>3种模式流畅渲染]
+        L3[屏幕旋转支持<br/>0°/90°/180°/270°]
+        L4[多缓冲管理<br/>2-3帧缓冲区]
+        L5[线程安全操作<br/>API互斥锁保护]
+        L6[任务管理<br/>LVGL定时器任务在CPU核心1]
+    end
+
+    subgraph "第4层：硬件抽象层"
+        H1[RGB LCD驱动<br/>800x480 ST7701控制器]
+        H2[触摸控制器<br/>GT911 I2C电容触摸]
+        H3[I2C总线管理<br/>共享总线架构]
+        H4[PWM控制<br/>PCA9685 12位PWM]
+        H5[GPIO配置<br/>ESP32-S3完整引脚映射]
+    end
+
+    %% 层间连接
+    A1 --> U1
+    A2 --> U2
+    A3 --> U3
+    A4 --> U4
+    A5 --> U5
+
+    U1 --> L1
+    U2 --> L2
+    U3 --> L3
+    U4 --> L4
+    U5 --> L5
+
+    L1 --> H1
+    L2 --> H2
+    L3 --> H3
+    L4 --> H4
+    L5 --> H5
+
+    %% 核心数据流
+    A3 -.->|压力控制| H4
+    H5 -.->|传感器数据| A4
+    A5 -.->|安全监测| A1
+    U5 -.->|用户输入| A1
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     用户界面层                           │
-│   ┌─────────────┐  ┌─────────────┐  ┌─────────────┐   │
-│   │   主界面    │  │   设置界面  │  │   状态显示  │   │
-│   └─────────────┘  └─────────────┘  └─────────────┘   │
-└─────────────┬───────────────────────────────┬─────────┘
-             │                               │
-┌─────────────▼───────────────────────────────▼─────────┐
-│                   UI桥接层                             │
-│        事件处理 | 数据绑定 | 状态管理                   │
-└─────────────┬───────────────────────────────────────────┘
-             │
-┌─────────────▼───────────────────────────────────────────┐
-│                   业务控制层                             │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-│  │PID控制器 │ │状态机管理│ │异常检测  │ │参数管理  │   │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘   │
-└─────────────┬───────────────────────────────────────────┘
-             │
-┌─────────────▼───────────────────────────────────────────┐
-│                   硬件抽象层                             │
-│  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐   │
-│  │LCD显示器 │ │触摸控制器│ │PWM控制器 │ │压力传感器│   │
-│  │ST7701    │ │GT911     │ │PCA9685   │ │ADC采样   │   │
-│  └──────────┘ └──────────┘ └──────────┘ └──────────┘   │
-└─────────────────────────────────────────────────────────┘
+
+### 系统数据流向图
+
+```mermaid
+graph TD
+    subgraph "👨‍⚕️ 用户界面层"
+        A[🎯 触摸输入<br/>⚡ 电源开关: 开/关<br/>🎯 目标压力: -16kPa<br/>⏱️ 工作模式: 持续/间歇<br/>🔧 参数设置菜单]
+        B[📊 实时显示<br/>当前压力值<br/>系统运行状态<br/>异常报警信息]
+    end
+    
+    subgraph "🔄 控制处理层"
+        C[🌉 UI桥接层<br/>• 事件处理<br/>• 状态管理<br/>🚨 异常检测<br/>🛡️ 安全逻辑]
+        D[⚙️ PID控制算法<br/>Kp=20.0<br/>Ki=2.0<br/>Kd=1.0<br/>精密压力调节]
+        E[🎛️ PWM控制器<br/>PCA9685芯片<br/>12位分辨率<br/>1kHz频率<br/>泵速调节]
+    end
+    
+    subgraph "📊 数据处理层"
+        F[🔬 卡尔曼滤波器<br/>过程噪声Q=0.01<br/>测量噪声R=0.1<br/>压力数据平滑]
+        G[🎨 LVGL图形引擎<br/>800×480分辨率<br/>防撕裂技术<br/>多重缓冲<br/>中文字体支持]
+    end
+    
+    subgraph "🔧 硬件设备层"
+        H[💨 负压泵系统<br/>变频调速控制<br/>转速范围60%-100%<br/>医疗级静音设计]
+        I[📊 压力传感器<br/>ADC1通道5<br/>GPIO6接口<br/>测量范围-30~0kPa<br/>±1kPa精度]
+        J[💻 硬件平台<br/>ESP32-S3双核MCU<br/>ST7701 LCD驱动<br/>GT911触摸控制<br/>I2C共享总线]
+    end
+    
+    subgraph "🏥 医疗应用层"
+        K[👩‍⚕️ 患者治疗<br/>负压创面疗法<br/>持续/间歇模式<br/>个性化治疗方案]
+        L[🩹 创面监测<br/>伤口愈合状态<br/>渗液引流情况<br/>实时压力反馈]
+    end
+    
+    %% 主要数据流向
+    A -->|用户操作| C
+    C -->|控制指令| D
+    D -->|PID输出| E
+    E -->|PWM驱动| H
+    H -->|负压治疗| K
+    K -->|治疗反馈| L
+    L -->|压力数据| I
+    I -->|传感器信号| F
+    F -->|滤波数据| D
+    F -->|显示数据| G
+    G -->|界面更新| B
+    B -->|状态反馈| A
+    
+    %% 安全监控
+    C -.->|安全监控| H
+    C -.->|异常检测| E
+    
+    %% 硬件支撑
+    G --> J
+    E --> J
+    I --> J
+    
+    %% 样式定义
+    style A fill:#e3f2fd,stroke:#1976d2,stroke-width:2px
+    style B fill:#e8f5e8,stroke:#388e3c,stroke-width:2px
+    style D fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    style H fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+    style I fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    style K fill:#ffebee,stroke:#d32f2f,stroke-width:2px
 ```
+
+#### 🔍 数据流说明
+
+| 流向类型 | 符号 | 说明 |
+|---------|------|------|
+| **主控制流** | `-->` | 用户输入到硬件执行的完整控制链路 |
+| **反馈数据流** | `-->` | 从传感器到显示的数据采集与处理 |
+| **安全监控** | `-.->` | 异常检测与安全保护机制 |
+| **硬件支撑** | `-->` | 底层硬件平台对上层功能的支撑 |
+
+### 核心组件关系图
+
+<div align="center">
+
+| **ESP32-S3 微控制器** |
+|:---:|
+| 240MHz 双核处理器 |
+| 8MB Flash + 8MB PSRAM |
+
+</div>
+
+<table>
+<tr>
+<td width="33%" align="center">
+
+**🖥️ 显示子系统**
+
+| 组件 | 功能 |
+|------|------|
+| **ST7701** | LCD驱动控制 |
+| **GT911** | I2C触摸控制 |
+| **LVGL** | 图形引擎渲染 |
+| **800×480** | RGB显示分辨率 |
+
+</td>
+<td width="33%" align="center">
+
+**⚙️ 控制子系统**
+
+| 组件 | 功能 |
+|------|------|
+| **PCA9685** | 12位PWM控制 |
+| **负压泵** | 医疗级真空泵 |
+| **PID算法** | 精密压力调节 |
+| **1kHz** | PWM控制频率 |
+
+</td>
+<td width="33%" align="center">
+
+**📊 感知子系统**
+
+| 组件 | 功能 |
+|------|------|
+| **ADC1_CH5** | 压力传感器接口 |
+| **GPIO6** | 模拟信号输入 |
+| **I2C总线** | 设备通信共享 |
+| **-30~0kPa** | 压力测量范围 |
+
+</td>
+</tr>
+</table>
+
+<div align="center">
+
+**🛡️ 安全监测系统**
+
+| 功能模块 | 实现特性 |
+|:---:|:---:|
+| 🚨 **漏气检测** | 压力范围监控，5秒持续检测 |
+| 🚧 **堵塞检测** | 过压保护，自动报警提醒 |
+| 🛑 **自动停止** | 异常情况下紧急停机保护 |
+| ⏱️ **初始化定时器** | 60秒启动保护，避免误报 |
+| 🛡️ **压力限制** | 安全范围锁定，参数边界保护 |
+| 💾 **NVS存储** | 设置参数持久化保存 |
+| 🔔 **报警系统** | 多级报警，状态显示锁定 |
+| 📈 **数据记录** | 运行状态实时监测记录 |
+
+</div>
 
 ## 🔧 硬件配置
 
@@ -117,7 +292,7 @@
 
 **实时监测区域**
 - 🔢 大字号当前压力显示
-- 🎯 目标压力值显示  
+- 🎯 目标压力值显示
 - ⚙️ 工作模式状态显示
 - 🔄 泵速百分比显示
 - 📊 系统运行状态指示
@@ -139,7 +314,7 @@
 
 - **目标压力设置**: -30kPa 至 -10kPa，步长1kPa
 - **工作时间设置**: 1-60分钟，用于间歇模式工作周期
-- **休息时间设置**: 1-60分钟，用于间歇模式休息周期  
+- **休息时间设置**: 1-60分钟，用于间歇模式休息周期
 - **工作模式选择**: 持续模式 / 间歇模式切换
 - **参数保存**: 设置自动保存至NVS非易失存储
 
@@ -180,14 +355,14 @@
 // PID控制参数 (优化的快速响应参数)
 typedef struct {
     float kp = 20.0f;    // 比例系数 - 快速响应压力偏差
-    float ki = 2.0f;     // 积分系数 - 消除稳态误差  
+    float ki = 2.0f;     // 积分系数 - 消除稳态误差
     float kd = 1.0f;     // 微分系数 - 减少超调震荡
 } npwt_pid_t;
 
 // PID计算过程
 float error = target_pressure - current_pressure;  // 压力误差
 float P_term = kp * error;                         // 比例项
-float I_term = ki * integral;                      // 积分项  
+float I_term = ki * integral;                      // 积分项
 float D_term = kd * (error - prev_error) / dt;     // 微分项
 float pid_output = P_term + I_term + D_term;       // PID输出
 
@@ -258,7 +433,7 @@ typedef enum {
 | 异常类型 | 检测条件 | 检测时间 | 处理动作 | 恢复方式 |
 |----------|----------|----------|----------|----------|
 | **敷料漏气** | 压力-5～0kPa且目标<-10kPa | 持续5秒 | 🚨报警+🛑自动停机 | 手动重启 |
-| **管道堵塞** | 压力持续<-32kPa | 持续5秒 | 🚨仅报警，继续运行 | 自动清除 |
+| **管道堵塞** | 压力持续<-30kPa | 持续5秒 | 🚨仅报警，继续运行 | 自动清除 |
 | **启动保护** | 系统启动阶段 | 前30秒 | ⏸️暂停异常检测 | 自动恢复 |
 
 ### 安全特性设计
@@ -358,7 +533,7 @@ idf.py menuconfig
 # 导航到 "Example Configuration" 进行配置
 # 主要配置项：
 # - Display Configuration
-# - LVGL Configuration  
+# - LVGL Configuration
 # - Component Configuration
 ```
 
@@ -396,7 +571,7 @@ idf.py -p /dev/ttyUSB0 monitor
 I (xxx) NPWT_CORE: Initializing NPWT system...
 I (xxx) NPWT_CORE: Scanning I2C devices...
 I (xxx) NPWT_CORE: Found device at address: 0x40 (PCA9685)
-I (xxx) NPWT_CORE: Found device at address: 0x14 (GT911)  
+I (xxx) NPWT_CORE: Found device at address: 0x14 (GT911)
 I (xxx) NPWT_CORE: Running PCA9685 output test...
 I (xxx) NPWT_CORE: UI bridge initialized successfully
 I (xxx) NPWT_CORE: System ready for operation
@@ -457,7 +632,7 @@ THU-NPWT/
 - waveshare_esp32_s3_rgb_lcd_init() // LCD初始化
 - waveshare_esp32_s3_touch_reset()  // 触摸复位
 
-// LVGL移植 (lvgl_port.c)  
+// LVGL移植 (lvgl_port.c)
 - lvgl_port_init()        // LVGL端口初始化
 - lvgl_port_lock()        // LVGL线程锁
 ```
@@ -476,7 +651,7 @@ if (response_too_slow) {
     pid->ki += 0.5f;   // 增大积分系数
 }
 
-// 稳定性调节  
+// 稳定性调节
 if (system_oscillating) {
     pid->kp -= 5.0f;   // 减小比例系数
     pid->kd += 0.5f;   // 增大微分系数
@@ -508,7 +683,7 @@ if (filter_too_slow) {
 #define LEAK_DETECT_TIME   5000    // 检测时间(ms)
 
 // 堵塞检测阈值
-#define BLOCKAGE_PRESSURE  -32     // 堵塞检测压力(kPa)
+#define BLOCKAGE_PRESSURE  -30     // 堵塞检测压力(kPa)
 #define BLOCKAGE_DETECT_TIME 5000  // 检测时间(ms)
 ```
 
@@ -519,16 +694,16 @@ if (filter_too_slow) {
 
 ```c
 // PID控制调试 (每2秒输出)
-ESP_LOGI(TAG, "PID: setpoint=%.1f, input=%.1f, error=%.1f, out=%.1f", 
+ESP_LOGI(TAG, "PID: setpoint=%.1f, input=%.1f, error=%.1f, out=%.1f",
          setpoint, input, error, pid_output);
 ESP_LOGI(TAG, "Terms: P=%.1f, I=%.1f, D=%.1f", P_term, I_term, D_term);
 
-// 压力传感器调试 (每1秒输出)  
-ESP_LOGI(TAG, "Pressure: raw=%.2f, filtered=%.2f, final=%d kPa", 
+// 压力传感器调试 (每1秒输出)
+ESP_LOGI(TAG, "Pressure: raw=%.2f, filtered=%.2f, final=%d kPa",
          raw_pressure, filtered_pressure, final_pressure);
 
 // 系统状态调试 (每2秒输出)
-ESP_LOGI(TAG, "Status: power=%s, mode=%s, state=%s", 
+ESP_LOGI(TAG, "Status: power=%s, mode=%s, state=%s",
          power_on?"ON":"OFF", mode_str, state_str);
 ```
 
@@ -609,7 +784,7 @@ npwt_ui_update_pressure()     // NPWT UI更新压力
 int16_t current_pressure;     // 当前压力
 uint32_t system_start_time;   // 系统启动时间
 
-// 常量命名: 大写下划线  
+// 常量命名: 大写下划线
 #define NPWT_PRESSURE_MIN     -30    // 最小压力值
 #define NPWT_PWM_FREQUENCY    1000   // PWM频率
 
@@ -623,10 +798,10 @@ typedef enum npwt_mode_t;            // 模式枚举
 /**
  * @brief PID控制器计算函数
  * @param pid PID控制器结构体指针
- * @param setpoint 目标设定值 (kPa) 
+ * @param setpoint 目标设定值 (kPa)
  * @param input 当前输入值 (kPa)
  * @return PID输出值 (0-1638范围)
- * 
+ *
  * @note 该函数实现增量式PID算法，包含积分限幅和微分项计算
  * @warning 调用前确保PID结构体已正确初始化
  */
@@ -642,7 +817,7 @@ if (condition) {
 }
 
 // 大括号换行风格
-if (condition) 
+if (condition)
 {
     function_call();
 }
@@ -662,7 +837,7 @@ if (x == y && z > 0) {
 main              # 稳定发布版本
 develop           # 开发集成分支
 
-# 功能分支  
+# 功能分支
 feature/ui-improve        # UI界面改进
 feature/pid-optimization  # PID算法优化
 feature/data-logging      # 数据记录功能
@@ -681,7 +856,7 @@ git checkout -b feature/new-function
 
 # 2. 开发和测试
 # ... 编码开发 ...
-# ... 单元测试 ...  
+# ... 单元测试 ...
 # ... 集成测试 ...
 
 # 3. 提交代码
@@ -689,7 +864,7 @@ git add .
 git commit -m "实现新功能: 详细功能描述
 
 - 添加XXX功能模块
-- 优化YYY算法性能  
+- 优化YYY算法性能
 - 修复ZZZ已知问题
 - 更新相关文档
 
@@ -714,7 +889,7 @@ git push origin feature/new-function
 
 # 类型说明
 feat:     新功能
-fix:      bug修复  
+fix:      bug修复
 docs:     文档更新
 style:    代码格式调整
 refactor: 代码重构
@@ -755,7 +930,7 @@ feat(core): 实现自适应PID控制算法
 ## 预期行为
 描述你期望看到的正确行为
 
-## 实际行为  
+## 实际行为
 描述实际发生的错误行为
 
 ## 错误日志

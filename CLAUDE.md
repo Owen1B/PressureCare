@@ -138,8 +138,8 @@ This is a **4-layer architecture** medical device system:
 ### Safety Features
 
 **Anomaly Detection with 60-second Initialization Delay**:
-- **Leakage Detection**: Pressure -3 to 0kPa for 5 seconds (when target < -5kPa)
-- **Blockage Detection**: Pressure < -32kPa for 5 seconds  
+- **Leakage Detection**: Pressure -3 to 0kPa for 5 seconds (when target < -5kPa) - auto stops pump
+- **Blockage Detection**: Pressure < -32kPa for 5 seconds - auto stops pump  
 - **Initialization Period**: 60 seconds after power-on before anomaly detection starts
 - **Status Display with Countdown**: 
   - During initialization: "初始化中（XX秒）" showing remaining time
