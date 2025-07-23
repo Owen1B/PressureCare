@@ -1,4 +1,4 @@
-# ESP32-S3-MedVac-Pro
+# THU-NPWT
 
 > 基于ESP32-S3的专业医疗级负压创面疗法(NPWT)设备，配备800x480触摸屏和精密压力控制系统
 
@@ -341,8 +341,8 @@ xtensa-esp32s3-elf-gcc --version
 
 3. **克隆项目代码**
 ```bash
-git clone https://github.com/你的用户名/ESP32-S3-MedVac-Pro.git
-cd ESP32-S3-MedVac-Pro
+git clone https://github.com/你的用户名/THU-NPWT.git
+cd THU-NPWT
 ```
 
 ### 编译和烧录
@@ -405,7 +405,7 @@ I (xxx) NPWT_CORE: System ready for operation
 ## 📁 项目结构
 
 ```
-ESP32-S3-MedVac-Pro/
+THU-NPWT/
 ├── 📁 main/                          # 主应用程序
 │   ├── 📄 main.c                     # 程序入口点和初始化
 │   ├── 📄 npwt_core.c/h             # 核心控制逻辑和算法
@@ -779,7 +779,7 @@ feat(core): 实现自适应PID控制算法
 ```
 MIT License
 
-Copyright (c) 2024 ESP32-S3-MedVac-Pro Project
+Copyright (c) 2024 THU-NPWT Project
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -841,11 +841,11 @@ copies or substantial portions of the Software.
 
 *基于ESP32-S3的下一代NPWT治疗设备*
 
-![GitHub Stars](https://img.shields.io/github/stars/username/repo?style=social)
-![GitHub Forks](https://img.shields.io/github/forks/username/repo?style=social)
-![GitHub Issues](https://img.shields.io/github/issues/username/repo)
-![GitHub License](https://img.shields.io/github/license/username/repo)
+![GitHub Stars](https://img.shields.io/github/stars/username/THU-NPWT?style=social)
+![GitHub Forks](https://img.shields.io/github/forks/username/THU-NPWT?style=social)
+![GitHub Issues](https://img.shields.io/github/issues/username/THU-NPWT)
+![GitHub License](https://img.shields.io/github/license/username/THU-NPWT)
 
-**[⭐ 给项目加星标](https://github.com/username/repo) | [🐛 报告问题](https://github.com/username/repo/issues) | [💡 功能建议](https://github.com/username/repo/discussions)**
+**[⭐ 给项目加星标](https://github.com/username/THU-NPWT) | [🐛 报告问题](https://github.com/username/THU-NPWT/issues) | [💡 功能建议](https://github.com/username/THU-NPWT/discussions)**
 
 </div>
