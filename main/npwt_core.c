@@ -181,15 +181,15 @@ static void npwt_control_task(void *pvParameters) {
         }
         xSemaphoreTake(g_npwt_system.data_mutex, portMAX_DELAY);
 
-        if (g_npwt_system.settings.power_on) {
-            // 每100ms读取一次压力（10Hz，与控制循环同步）
-            static uint32_t last_pressure_read = 0;
-            uint32_t current_time = esp_timer_get_time() / 1000;
-            if (current_time - last_pressure_read >= 100) {
-                last_pressure_read = current_time;
-                g_npwt_system.realtime.current_pressure = npwt_adc_read_pressure();
-            }
+        // 每100ms读取一次压力（无论开关机状态都读取）
+        static uint32_t last_pressure_read = 0;
+        uint32_t current_time = esp_timer_get_time() / 1000;
+        if (current_time - last_pressure_read >= 100) {
+            last_pressure_read = current_time;
+            g_npwt_system.realtime.current_pressure = npwt_adc_read_pressure();
+        }
 
+        if (g_npwt_system.settings.power_on) {
             // 控制任务状态调试
             static uint32_t last_control_debug = 0;
             if (current_time - last_control_debug >= 2000) {
