@@ -13,6 +13,7 @@ bool settings_modified = false;
 
 // 全局异常检测状态
 npwt_anomaly_detection_t g_anomaly_detection = {
+    .system_start_time = 0,
     .leak_detection_start = 0,
     .blockage_detection_start = 0,
     .auto_stop_enabled = false,
@@ -409,11 +410,11 @@ void npwt_ui_update_cycle_progress(void) {
 const char* npwt_ui_get_status_string(npwt_system_status_t status) {
     switch (status) {
         case NPWT_SYSTEM_STATUS_INIT:
-            return "系统初始化中";
+            return "正常运行（初始化）";
         case NPWT_SYSTEM_STATUS_READY:
             return "准备就绪";
         case NPWT_SYSTEM_STATUS_RUNNING:
-            return "正常运行中";
+            return "正常运行";
         case NPWT_SYSTEM_STATUS_I2C_ERROR:
             return "I2C异常";
         case NPWT_SYSTEM_STATUS_PCA9685_ERROR:
@@ -446,7 +447,7 @@ lv_color_t npwt_ui_get_status_color(npwt_system_status_t status) {
 
 void npwt_ui_update_system_status(void) {
     if (ui_Label_Header1) {
-        const char* status_str = npwt_ui_get_status_string(g_anomaly_detection.current_status);
+        const char* status_str = npwt_ui_get_current_status_string();  // 使用新的倒计时函数
         lv_color_t color = npwt_ui_get_status_color(g_anomaly_detection.current_status);
         
         lv_label_set_text(ui_Label_Header1, status_str);
@@ -465,21 +466,43 @@ void npwt_ui_check_anomalies(void) {
     npwt_settings_t settings = npwt_get_settings();
     uint32_t current_time = esp_timer_get_time() / 1000; // 转换为ms
     
-    // 只在系统运行且开启异常自动停止时检测异常
-    if (!settings.power_on || g_anomaly_detection.current_status != NPWT_SYSTEM_STATUS_RUNNING || !g_anomaly_detection.auto_stop_enabled) {
+    // 只在系统运行时进行状态管理
+    if (!settings.power_on) {
         g_anomaly_detection.leak_detection_start = 0;
         g_anomaly_detection.blockage_detection_start = 0;
+        g_anomaly_detection.system_start_time = 0;
+        g_anomaly_detection.current_status = NPWT_SYSTEM_STATUS_READY;  // 关机后回到准备就绪
         return;
     }
     
-    // 漏气检测: 如果正常运行时，系统的负压一直维持在0到-2，同时设定的负压小于-5
-    bool leak_condition = (realtime.current_pressure >= -2 && realtime.current_pressure <= 0) && 
+    // 检查是否在30秒初始化期内
+    uint32_t time_since_start = current_time - g_anomaly_detection.system_start_time;
+    if (time_since_start < 30000) { // 30秒
+        // 仍在初始化期，设置状态为初始化
+        g_anomaly_detection.current_status = NPWT_SYSTEM_STATUS_INIT;
+        g_anomaly_detection.leak_detection_start = 0;
+        g_anomaly_detection.blockage_detection_start = 0;
+        return;
+    } else {
+        // 超过30秒，进入正常运行状态
+        if (g_anomaly_detection.current_status == NPWT_SYSTEM_STATUS_INIT) {
+            g_anomaly_detection.current_status = NPWT_SYSTEM_STATUS_RUNNING;
+        }
+    }
+    
+    // 只有在开启异常自动停止时才进行异常检测
+    if (!g_anomaly_detection.auto_stop_enabled) {
+        return;
+    }
+    
+    // 漏气检测: 如果正常运行时，系统的负压一直维持在-3到0kPa，同时设定的负压小于-5
+    bool leak_condition = (realtime.current_pressure >= -3 && realtime.current_pressure <= 0) && 
                          (settings.target_pressure < -5);
     
     if (leak_condition) {
         if (g_anomaly_detection.leak_detection_start == 0) {
             g_anomaly_detection.leak_detection_start = current_time;
-        } else if (current_time - g_anomaly_detection.leak_detection_start >= 3000) { // 3秒
+        } else if (current_time - g_anomaly_detection.leak_detection_start >= 5000) { // 5秒
             // 检测到漏气
             npwt_ui_set_system_status(NPWT_SYSTEM_STATUS_LEAK);
             
@@ -498,13 +521,13 @@ void npwt_ui_check_anomalies(void) {
         g_anomaly_detection.leak_detection_start = 0;
     }
     
-    // 堵塞检测: 如果传感器读取的负压一直小于-45kPa
-    bool blockage_condition = realtime.current_pressure < -45;
+    // 堵塞检测: 如果传感器读取的负压一直小于-32kPa
+    bool blockage_condition = realtime.current_pressure < -32;
     
     if (blockage_condition) {
         if (g_anomaly_detection.blockage_detection_start == 0) {
             g_anomaly_detection.blockage_detection_start = current_time;
-        } else if (current_time - g_anomaly_detection.blockage_detection_start >= 3000) { // 3秒
+        } else if (current_time - g_anomaly_detection.blockage_detection_start >= 5000) { // 5秒
             // 检测到堵塞
             npwt_ui_set_system_status(NPWT_SYSTEM_STATUS_BLOCKAGE);
             
@@ -569,7 +592,42 @@ void npwt_ui_anomaly_detection_init(void) {
     
     // 检查系统初始化状态
     // TODO: 检查I2C和PCA9685状态，设置相应的状态
+    g_anomaly_detection.system_start_time = 0;  // 确保初始化时启动时间为0
     g_anomaly_detection.current_status = NPWT_SYSTEM_STATUS_READY;
+}
+
+// 获取初始化剩余时间（秒）
+int npwt_ui_get_init_remaining_time(void) {
+    if (g_anomaly_detection.current_status != NPWT_SYSTEM_STATUS_INIT || g_anomaly_detection.system_start_time == 0) {
+        return 0;  // 不在初始化状态或未启动
+    }
+    
+    uint32_t current_time = esp_timer_get_time() / 1000; // 转换为ms
+    uint32_t elapsed = current_time - g_anomaly_detection.system_start_time;
+    
+    if (elapsed >= 30000) {
+        return 0;  // 已超过30秒
+    }
+    
+    return (30000 - elapsed) / 1000;  // 返回剩余秒数
+}
+
+// 获取当前状态字符串（包含倒计时）
+const char* npwt_ui_get_current_status_string(void) {
+    static char status_buffer[32];  // 静态缓冲区存储状态字符串
+    
+    if (g_anomaly_detection.current_status == NPWT_SYSTEM_STATUS_INIT) {
+        int remaining_time = npwt_ui_get_init_remaining_time();
+        if (remaining_time > 0) {
+            snprintf(status_buffer, sizeof(status_buffer), "初始化中（%d秒）", remaining_time);
+        } else {
+            strcpy(status_buffer, npwt_ui_get_status_string(g_anomaly_detection.current_status));
+        }
+    } else {
+        strcpy(status_buffer, npwt_ui_get_status_string(g_anomaly_detection.current_status));
+    }
+    
+    return status_buffer;
 }
 
 // 模式和状态显示更新

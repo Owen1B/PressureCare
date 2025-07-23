@@ -58,6 +58,7 @@ typedef enum {
 
 // 异常检测相关
 typedef struct {
+    uint32_t system_start_time;       // 系统启动时间(ms) - 用于60秒延时
     uint32_t leak_detection_start;    // 漏气检测开始时间(ms)
     uint32_t blockage_detection_start; // 堵塞检测开始时间(ms)
     bool auto_stop_enabled;           // 是否开启异常自动停止
@@ -73,6 +74,7 @@ void npwt_ui_update_cycle_progress(void);
 
 // 系统状态相关函数
 const char* npwt_ui_get_status_string(npwt_system_status_t status);
+const char* npwt_ui_get_current_status_string(void);  // 获取当前状态字符串（包含倒计时）
 lv_color_t npwt_ui_get_status_color(npwt_system_status_t status);
 void npwt_ui_update_system_status(void);
 void npwt_ui_set_system_status(npwt_system_status_t status);
@@ -84,6 +86,9 @@ bool npwt_ui_get_auto_stop_enabled(void);
 void npwt_ui_set_auto_stop_enabled(bool enabled);
 void npwt_ui_anomaly_detection_init(void);
 void npwt_ui_update_auto_stop_button(void);
+
+// 获取初始化剩余时间（秒）
+int npwt_ui_get_init_remaining_time(void);
 
 // 临时设置变量 (用于设置界面)
 extern npwt_settings_t temp_settings;

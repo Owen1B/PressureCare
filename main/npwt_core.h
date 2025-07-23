@@ -17,7 +17,7 @@ extern "C" {
 #endif
 
 // 系统配置常量
-#define NPWT_PRESSURE_MIN           -100    // 最小负压值 (kPa)
+#define NPWT_PRESSURE_MIN           -30     // 最小负压值 (kPa)
 #define NPWT_PRESSURE_MAX           0       // 最大负压值 (kPa)
 #define NPWT_PRESSURE_STEP          -1      // 负压调节步长 (kPa)
 #define NPWT_PRESSURE_DEFAULT       -16     // 默认负压值 (kPa, 约-120mmHg)
@@ -37,9 +37,9 @@ extern "C" {
 
 #define NPWT_PWM_MIN                0       // PWM最小值
 #define NPWT_PWM_MAX                4095    // PWM最大值 (12-bit)
-#define NPWT_PWM_STARTUP            3686    // 启动时初始PWM占空比 (90%)
-#define NPWT_PWM_WORKING_MAX        3686    // 工作时最大PWM占空比 (90%)
-#define NPWT_PWM_WORKING_MIN        2457    // 工作时最小PWM占空比 (60%)
+#define NPWT_PWM_STARTUP            0       // 启动时初始PWM占空比 (0%，对应100%泵速)
+#define NPWT_PWM_WORKING_MAX        1638    // 工作时最大PWM占空比 (40%，对应60%泵速)
+#define NPWT_PWM_WORKING_MIN        0       // 工作时最小PWM占空比 (0%，对应100%泵速)
 #define NPWT_ADC_SAMPLES            10      // ADC采样次数
 
 // 工作模式枚举
@@ -160,6 +160,8 @@ esp_err_t npwt_pwm_set_duty(uint16_t duty);
 esp_err_t npwt_pid_init(npwt_pid_t *pid);
 float npwt_pid_calculate(npwt_pid_t *pid, float setpoint, float input);
 void npwt_pid_reset(npwt_pid_t *pid);
+void npwt_pid_full_reset(npwt_pid_t *pid);
+void npwt_pid_reset_with_initial(npwt_pid_t *pid, float initial_output);
 
 // 卡尔曼滤波器
 esp_err_t npwt_kalman_init(npwt_kalman_t *kalman, float Q, float R, float initial_estimate);

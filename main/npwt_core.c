@@ -1,4 +1,5 @@
 #include "npwt_core.h"
+#include "npwt_ui_bridge.h"
 #include "esp_timer.h"
 #include "esp_random.h"
 #include <math.h>
@@ -243,7 +244,7 @@ static void npwt_control_task(void *pvParameters) {
             g_npwt_system.ui_update_callback();
         }
 
-        vTaskDelay(pdMS_TO_TICKS(100)); // 100ms循环
+        vTaskDelay(pdMS_TO_TICKS(200)); // 200ms循环，减慢控制频率
     }
 }
 
@@ -452,15 +453,15 @@ esp_err_t npwt_pid_init(npwt_pid_t *pid) {
     if (!pid) return ESP_ERR_INVALID_ARG;
 
     // PID参数 - 反向PWM控制（100%=停止，60%=最快）
-    // 优化为快速响应，1-2秒内达到目标负压
-    pid->kp = 25.0f;    // 提高比例系数，加快响应速度
-    pid->ki = 2.0f;     // 提高积分系数，消除稳态误差
-    pid->kd = 1.0f;     // 适度提高微分系数，减少超调
+    // 调整为较慢响应，3-5秒内平稳达到目标负压
+    pid->kp = 8.0f;     // 降低比例系数，减慢响应速度
+    pid->ki = 0.5f;     // 降低积分系数，减少积分累积
+    pid->kd = 0.2f;     // 降低微分系数，减少震荡
 
     pid->integral = 0.0f;
     pid->prev_error = 0.0f;
-    pid->output_min = 0.0f;         // PID输出最小值
-    pid->output_max = 1638.0f;      // PID输出最大值 (40% of 4095)
+    pid->output_min = 0.0f;         // PID输出最小值（映射到40%占空比，60%泵速）
+    pid->output_max = 1638.0f;      // PID输出最大值（映射到0%占空比，100%泵速）
     pid->last_time = esp_timer_get_time() / 1000;
 
     ESP_LOGI(TAG, "PID controller initialized (Kp=%.2f, Ki=%.2f, Kd=%.2f)",
@@ -555,11 +556,12 @@ esp_err_t npwt_mode_continuous_run(void) {
     );
 
     // 反向PWM控制（100%占空比=泵停止，0%占空比=泵最快）
-    uint16_t pwm_duty = 4095 - (uint16_t)pid_output;
+    // PID输出0-1638映射到40%-0%占空比（60%-100%泵速）
+    uint16_t pwm_duty = NPWT_PWM_WORKING_MAX - (uint16_t)pid_output;
     
-    // 限制PWM范围：60%-90%（避免100%停泵和过快运行）
-    if (pwm_duty > NPWT_PWM_WORKING_MAX) pwm_duty = NPWT_PWM_WORKING_MAX;  // 最大90%（避免接近停泵）
-    if (pwm_duty < NPWT_PWM_WORKING_MIN) pwm_duty = NPWT_PWM_WORKING_MIN;  // 最小60%（泵最快，安全限制）
+    // 限制PWM范围：0%-40%占空比（100%-60%泵速）
+    if (pwm_duty > NPWT_PWM_WORKING_MAX) pwm_duty = NPWT_PWM_WORKING_MAX;  // 最大40%占空比（60%泵速）
+    if (pwm_duty < NPWT_PWM_WORKING_MIN) pwm_duty = NPWT_PWM_WORKING_MIN;  // 最小0%占空比（100%泵速）
 
     ESP_LOGI(TAG, "PID output: %.2f, PWM duty: %d (%.1f%%)", pid_output, pwm_duty, (pwm_duty * 100.0f) / 4095.0f);
     npwt_pwm_set_duty(pwm_duty);
@@ -805,21 +807,31 @@ esp_err_t npwt_set_power(bool power_on) {
         g_npwt_system.realtime.work_elapsed = 0;
         g_npwt_system.realtime.rest_elapsed = 0;
         g_npwt_system.realtime.pump_pwm = 4095;  // 100%占空比 = 泵停止
-        npwt_pid_reset(&g_npwt_system.pid);
+        npwt_pwm_set_duty(4095);  // 确保泵停止
+        npwt_pid_full_reset(&g_npwt_system.pid);  // 完全重置PID
+        
+        // 重置异常检测状态到准备就绪
+        g_anomaly_detection.system_start_time = 0;
+        g_anomaly_detection.current_status = NPWT_SYSTEM_STATUS_READY;
     } else {
         // 开启时：重置状态和计时器
         g_npwt_system.realtime.state = NPWT_STATE_IDLE;
         g_npwt_system.realtime.work_elapsed = 0;
         g_npwt_system.realtime.rest_elapsed = 0;
         
-        // 重置PID控制器，清除积分和历史误差
-        npwt_pid_reset(&g_npwt_system.pid);
+        // 完全重置PID控制器，包括所有参数和状态变量
+        npwt_pid_full_reset(&g_npwt_system.pid);
         
-        // 启动时直接设置为初始PWM占空比，跳过100%停泵状态
+        // 记录系统启动时间，用于60秒异常检测延时
+        g_anomaly_detection.system_start_time = esp_timer_get_time() / 1000;
+        g_anomaly_detection.current_status = NPWT_SYSTEM_STATUS_INIT;
+        
+        // 启动时设置为40%占空比（对应60%泵速）
+        // 这样PID输出为0时正好对应40%占空比，避免跳变到100%泵速
         g_npwt_system.realtime.pump_pwm = NPWT_PWM_STARTUP;
         npwt_pwm_set_duty(NPWT_PWM_STARTUP);
         
-        ESP_LOGI(TAG, "System started with 90%% PWM, PID reset and control will begin");
+        ESP_LOGI(TAG, "System started with 40%% PWM (60%% pump speed), PID reset and control will begin");
     }
 
     xSemaphoreGive(g_npwt_system.data_mutex);
@@ -978,11 +990,31 @@ int16_t npwt_get_current_target_pressure(void) {
     return g_npwt_system.settings.target_pressure;
 }
 
-// PID重置
+// PID重置（仅清除状态变量）
 void npwt_pid_reset(npwt_pid_t *pid) {
     if (!pid) return;
 
     pid->integral = 0.0f;
+    pid->prev_error = 0.0f;
+    pid->last_time = esp_timer_get_time() / 1000;
+}
+
+// PID完全重置（重新初始化所有参数）
+void npwt_pid_full_reset(npwt_pid_t *pid) {
+    if (!pid) return;
+    
+    ESP_LOGI(TAG, "PID full reset - reinitializing all parameters");
+    
+    // 重新初始化所有PID参数
+    npwt_pid_init(pid);
+}
+
+// PID重置并设置合理初始值（用于启动时）
+void npwt_pid_reset_with_initial(npwt_pid_t *pid, float initial_output) {
+    if (!pid) return;
+    
+    // 设置积分项为初始输出值，避免启动时的突变
+    pid->integral = initial_output / pid->ki;  // 反向计算积分项
     pid->prev_error = 0.0f;
     pid->last_time = esp_timer_get_time() / 1000;
 }
