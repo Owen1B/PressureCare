@@ -453,7 +453,7 @@ lv_obj_set_align( ui_Image6, LV_ALIGN_CENTER );
 lv_obj_add_flag( ui_Image6, LV_OBJ_FLAG_ADV_HITTEST );   /// Flags
 
 ui_Roller7 = lv_roller_create(ui_Roller_Number3);
-lv_roller_set_options( ui_Roller7, "持续模式\n间歇模式\n动态模式", LV_ROLLER_MODE_NORMAL );
+lv_roller_set_options( ui_Roller7, "持续模式\n间歇模式", LV_ROLLER_MODE_NORMAL );
 lv_obj_set_width( ui_Roller7, 142);
 lv_obj_set_height( ui_Roller7, 131);
 lv_obj_set_align( ui_Roller7, LV_ALIGN_CENTER );
