@@ -181,12 +181,33 @@ static void npwt_control_task(void *pvParameters) {
         }
         xSemaphoreTake(g_npwt_system.data_mutex, portMAX_DELAY);
 
-        // 每100ms读取一次压力（无论开关机状态都读取）
+        // 压力传感器读取逻辑
         static uint32_t last_pressure_read = 0;
+        static bool pressure_reached_zero = false;  // 标记关机后压力是否已回升到0
         uint32_t current_time = esp_timer_get_time() / 1000;
+        
         if (current_time - last_pressure_read >= 100) {
             last_pressure_read = current_time;
-            g_npwt_system.realtime.current_pressure = npwt_adc_read_pressure();
+            
+            if (g_npwt_system.settings.power_on) {
+                // 开机状态：正常读取压力，重置标记
+                g_npwt_system.realtime.current_pressure = npwt_adc_read_pressure();
+                pressure_reached_zero = false;
+            } else {
+                // 关机状态：只有在压力还没回升到0时才继续读取
+                if (!pressure_reached_zero) {
+                    int16_t current_pressure = npwt_adc_read_pressure();
+                    g_npwt_system.realtime.current_pressure = current_pressure;
+                    
+                    // 检查压力是否已回升到接近0（±2kPa范围内认为是大气压）
+                    if (current_pressure >= -2 && current_pressure <= 2) {
+                        pressure_reached_zero = true;
+                        g_npwt_system.realtime.current_pressure = 0;  // 设置为准确的0
+                        ESP_LOGI(TAG, "Pressure returned to atmospheric level, stopping updates");
+                    }
+                }
+                // 如果已经回升到0，就不再更新压力值
+            }
         }
 
         if (g_npwt_system.settings.power_on) {
