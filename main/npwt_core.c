@@ -588,8 +588,8 @@ esp_err_t npwt_mode_intermittent_run(void) {
                 g_npwt_system.settings.target_pressure,
                 g_npwt_system.realtime.current_pressure
             );
-            // 反向PWM控制
-            uint16_t pwm_duty = 4095 - (uint16_t)pid_output;
+            // 反向PWM控制（与持续模式统一）
+            uint16_t pwm_duty = NPWT_PWM_WORKING_MAX - (uint16_t)pid_output;
             if (pwm_duty > NPWT_PWM_WORKING_MAX) pwm_duty = NPWT_PWM_WORKING_MAX;
             if (pwm_duty < NPWT_PWM_WORKING_MIN) pwm_duty = NPWT_PWM_WORKING_MIN;
             npwt_pwm_set_duty(pwm_duty);
@@ -649,8 +649,8 @@ esp_err_t npwt_mode_dynamic_run(void) {
                 ramp_target,
                 g_npwt_system.realtime.current_pressure
             );
-            // 反向PWM控制
-            uint16_t pwm_duty = 4095 - (uint16_t)pid_output;
+            // 反向PWM控制（与持续模式统一）
+            uint16_t pwm_duty = NPWT_PWM_WORKING_MAX - (uint16_t)pid_output;
             if (pwm_duty > NPWT_PWM_WORKING_MAX) pwm_duty = NPWT_PWM_WORKING_MAX;
             if (pwm_duty < NPWT_PWM_WORKING_MIN) pwm_duty = NPWT_PWM_WORKING_MIN;
             npwt_pwm_set_duty(pwm_duty);
@@ -678,8 +678,8 @@ esp_err_t npwt_mode_dynamic_run(void) {
                 ramp_target,
                 g_npwt_system.realtime.current_pressure
             );
-            // 反向PWM控制
-            uint16_t pwm_duty = 4095 - (uint16_t)pid_output;
+            // 反向PWM控制（与持续模式统一）
+            uint16_t pwm_duty = NPWT_PWM_WORKING_MAX - (uint16_t)pid_output;
             if (pwm_duty > NPWT_PWM_WORKING_MAX) pwm_duty = NPWT_PWM_WORKING_MAX;
             if (pwm_duty < NPWT_PWM_WORKING_MIN) pwm_duty = NPWT_PWM_WORKING_MIN;
             npwt_pwm_set_duty(pwm_duty);
@@ -822,16 +822,16 @@ esp_err_t npwt_set_power(bool power_on) {
         // 完全重置PID控制器，包括所有参数和状态变量
         npwt_pid_full_reset(&g_npwt_system.pid);
         
-        // 记录系统启动时间，用于60秒异常检测延时
+        // 记录系统启动时间，用于30秒异常检测延时
         g_anomaly_detection.system_start_time = esp_timer_get_time() / 1000;
         g_anomaly_detection.current_status = NPWT_SYSTEM_STATUS_INIT;
         
-        // 启动时设置为40%占空比（对应60%泵速）
-        // 这样PID输出为0时正好对应40%占空比，避免跳变到100%泵速
+        // 启动时设置为0%占空比（对应100%泵速）
+        // 直接以最大泵速启动，快速建立目标负压
         g_npwt_system.realtime.pump_pwm = NPWT_PWM_STARTUP;
         npwt_pwm_set_duty(NPWT_PWM_STARTUP);
         
-        ESP_LOGI(TAG, "System started with 40%% PWM (60%% pump speed), PID reset and control will begin");
+        ESP_LOGI(TAG, "System started with 0%% PWM (100%% pump speed), PID reset and control will begin");
     }
 
     xSemaphoreGive(g_npwt_system.data_mutex);
