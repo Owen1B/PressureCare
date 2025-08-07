@@ -18,12 +18,18 @@ Negative Pressure Wound Therapy is a therapeutic technique used to promote heali
 
 ## Demonstration
 
-A short video demonstration of the device in operation. Click the image to watch the video.
+### Video Demo
+
+A complete demonstration of the system in operation, from startup to real-time pressure control.
+
+https://github.com/user-attachments/assets/2721eb9b-3225-47eb-ae20-bf3e925fd7e3
+
+### Hardware Prototype
+
+The following image shows the physical prototype of the PressureCare device.
 
 <p align="center">
-  <a href="https://github.com/user-attachments/assets/2721eb9b-3225-47eb-ae20-bf3e925fd7e3">
-    <img src="docs/images/demo.jpg" alt="Click to watch video demo" width="600"/>
-  </a>
+  <img src="docs/images/demo.jpg" alt="Hardware Prototype" width="600"/>
 </p>
 
 ### User Interface
