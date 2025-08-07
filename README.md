@@ -16,6 +16,18 @@ Negative Pressure Wound Therapy is a therapeutic technique used to promote heali
 - **User-friendly Interface**: A 800x480 touchscreen UI for setting and monitoring therapy parameters.
 - **Safety Alarms**: Includes placeholder logic for leak and blockage detection.
 
+## Demonstration
+
+A short video demonstration of the device in operation. Click the image to watch the video.
+
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/2721eb9b-3225-47eb-ae20-bf3e925fd7e3">
+    <img src="docs/images/demo.jpg" alt="Click to watch video demo" width="600"/>
+  </a>
+</p>
+
+### User Interface
+
 <p align="center">
   <img src="docs/images/ui1.png" alt="Main Screen" width="400"/>
   <img src="docs/images/ui2.png" alt="Settings Screen" width="400"/>
