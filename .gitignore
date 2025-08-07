@@ -1,13 +1,15 @@
-# ESP-IDF build artifacts
-build/
-sdkconfig
-sdkconfig.old
-managed_components/
+# ESP-IDF Build Artifacts
+/build/
+/sdkconfig
+/sdkconfig.old
 
-# VS Code settings
+# Component Manager
+/managed_components/
+# Keep dependencies.lock for reproducible builds, so it's not ignored.
+
+# IDE & Editor specific files
 .vscode/
-
-# IDE files
+.idea/
 *.swp
 *.swo
 *~
@@ -21,27 +23,16 @@ managed_components/
 ehthumbs.db
 Thumbs.db
 
-# Log files
-*.log
-
-# Temporary files
-*.tmp
-*.temp
-
 # Python cache
 __pycache__/
 *.pyc
 *.pyo
 
-# Component manager locks (keep dependencies.lock for reproducible builds)
-# dependencies.lock
-
-# Flash download tool
+# Flash download tool arguments
 flash_project_args
 
-# Core dumps
+# Core dump files
 core
 
 # Local environment variables
 .env
-EOF < /dev/null
