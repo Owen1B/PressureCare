@@ -17,8 +17,8 @@ Negative Pressure Wound Therapy is a therapeutic technique used to promote heali
 - **Safety Alarms**: Includes placeholder logic for leak and blockage detection.
 
 <p align="center">
-  <img src="ui1.png" alt="Main Screen" width="400"/>
-  <img src="ui2.png" alt="Settings Screen" width="400"/>
+  <img src="docs/images/ui1.png" alt="Main Screen" width="400"/>
+  <img src="docs/images/ui2.png" alt="Settings Screen" width="400"/>
 </p>
 
 ## Technical Architecture
@@ -27,35 +27,40 @@ The system is designed with a layered architecture to ensure modularity and main
 
 ```mermaid
 graph TD
-    subgraph "Application Layer"
-        A[UI (LVGL)]
-        B[Therapy Logic & State Machine]
+    subgraph Application Layer
+        direction TB
+        A["UI (LVGL)"]
+        B["Therapy Logic & State Machine"]
     end
 
     subgraph "Control & Algorithm Layer"
-        C[PID Controller]
-        D[Kalman Filter]
+        direction TB
+        C["PID Controller"]
+        D["Kalman Filter"]
     end
 
     subgraph "Hardware Abstraction Layer (HAL)"
-        E[Pressure Sensor Driver]
-        F[Pump Driver (PWM)]
+        direction TB
+        E["Pressure Sensor Driver"]
+        F["Pump Driver (PWM)"]
     end
 
-    subgraph "Hardware"
-        G[ESP32-S3 SoC]
-        H[Pressure Sensor]
-        I[Pump & PWM Controller]
+    subgraph Hardware
+        direction TB
+        G["ESP32-S3 SoC"]
+        H["Pressure Sensor"]
+        I["Pump & PWM Controller"]
     end
 
     A <--> B
-    B -- sets pressure --> C
-    C -- gets filtered data --> D
-    D -- gets raw data --> E
-    C -- controls --> F
-    E -- interfaces --> H
-    F -- interfaces --> I
-    H & I -- on --> G
+    B -- "sets pressure" --> C
+    C -- "gets filtered data" --> D
+    D -- "gets raw data" --> E
+    C -- "controls" --> F
+    E -- "interfaces" --> H
+    F -- "interfaces" --> I
+    H --> G
+    I --> G
 ```
 
 - **Application Layer**: Manages the user interface (built with LVGL and SquareLine Studio) and the main therapy state machine.
