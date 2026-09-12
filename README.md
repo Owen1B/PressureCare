@@ -1,193 +1,103 @@
-# PressureCare: An Embedded NPWT Controller
+# PressureCare · 嵌入式负压控制原型
 
-PressureCare is a professional-grade Negative Pressure Wound Therapy (NPWT) controller based on the ESP32-S3. It features a high-resolution touchscreen interface, precise pressure regulation through a PID control loop, and robust safety mechanisms. This project serves as a reference design for embedded medical device development.
+[English](README.en.md) · [控制算法与系统设计](docs/architecture.md) · [构建说明](docs/build.md)
 
-[![ESP-IDF](https://img.shields.io/badge/ESP--IDF-v5.0-blue.svg)](https://github.com/espressif/esp-idf)
-[![LVGL](https://img.shields.io/badge/LVGL-v8.3-green.svg)](https://lvgl.io/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+基于 ESP32-S3 的个人嵌入式项目，围绕负压控制台架实现压力采集、Kalman 滤波、离散 PID、连续与间歇运行，以及触摸屏参数设置。软件使用 C 编写，采用 ESP-IDF / FreeRTOS 组织控制任务，通过 LVGL 显示压力、工作状态和周期进度。
 
-## Project Overview
+项目重点是传感器标定、反馈控制与人机交互的集成。作者：郑皓文（Owen）。
 
-Negative Pressure Wound Therapy is a therapeutic technique used to promote healing in acute and chronic wounds. This project implements the core functionalities of an NPWT device, including:
+## 项目演示
 
-- **Precise Pressure Control**: Maintains a target sub-atmospheric pressure with a ±1 kPa accuracy.
-- **Dual Therapy Modes**: Supports both continuous and intermittent therapy modes.
-- **Real-time Monitoring**: Displays critical parameters such as current pressure, target pressure, and therapy duration.
-- **User-friendly Interface**: A 800x480 touchscreen UI for setting and monitoring therapy parameters.
-- **Safety Alarms**: Includes placeholder logic for leak and blockage detection.
+<p align="center">
+  <a href="https://github.com/user-attachments/assets/2721eb9b-3225-47eb-ae20-bf3e925fd7e3">
+    <img src="docs/images/demo.jpg" alt="PressureCare 硬件原型，点击查看演示视频" width="780">
+  </a>
+</p>
 
-## Demonstration
+<p align="center">硬件原型与触摸屏，点击图片查看演示。</p>
 
-### Video Demo
-
-A complete demonstration of the system in operation, from startup to real-time pressure control.
+### 实机视频
 
 https://github.com/user-attachments/assets/2721eb9b-3225-47eb-ae20-bf3e925fd7e3
 
-### Hardware Prototype
-
-The following image shows the physical prototype of the PressureCare device.
+### 操作界面
 
 <p align="center">
-  <img src="docs/images/demo.jpg" alt="Hardware Prototype" width="600"/>
+  <img src="docs/images/ui1.png" alt="主界面" width="48%">
+  <img src="docs/images/ui2.png" alt="设置界面" width="48%">
 </p>
 
-### User Interface
+<p align="center">主界面显示运行信息，设置界面调整目标压力、运行模式及工作与休息时间。</p>
 
-<p align="center">
-  <img src="docs/images/ui1.png" alt="Main Screen" width="400"/>
-  <img src="docs/images/ui2.png" alt="Settings Screen" width="400"/>
-</p>
+## 技术栈
 
-## Technical Architecture
+| 层级 | 技术与用途 |
+| --- | --- |
+| 嵌入式软件 | C、ESP-IDF、CMake；应用、控制算法与硬件抽象层分别组织。 |
+| 测量与估计 | ADC 单次采样、ADC 电压校准、压力线性标定、标量 Kalman 滤波。 |
+| 控制算法 | 带实际采样间隔的离散 PID、积分限幅、输出饱和、执行器极性映射。 |
+| 实时系统 | FreeRTOS 控制任务、软件定时器、互斥锁、状态机和 UI 回调。 |
+| 显示与交互 | LVGL 8、SquareLine UI、800×480 RGB LCD、GT911 触摸输入。 |
+| 硬件与存储 | ESP32-S3、I2C / PCA9685 PWM、模拟压力传感器、NVS 参数保存。 |
 
-The system is designed with a layered architecture to ensure modularity and maintainability.
+## 功能与控制路径
 
-```mermaid
-graph TD
-    subgraph Application Layer
-        direction TB
-        A["UI (LVGL)"]
-        B["Therapy Logic & State Machine"]
-    end
-
-    subgraph "Control & Algorithm Layer"
-        direction TB
-        C["PID Controller"]
-        D["Kalman Filter"]
-    end
-
-    subgraph "Hardware Abstraction Layer (HAL)"
-        direction TB
-        E["Pressure Sensor Driver"]
-        F["Pump Driver (PWM)"]
-    end
-
-    subgraph Hardware
-        direction TB
-        G["ESP32-S3 SoC"]
-        H["Pressure Sensor"]
-        I["Pump & PWM Controller"]
-    end
-
-    A <--> B
-    B -- "sets pressure" --> C
-    C -- "gets filtered data" --> D
-    D -- "gets raw data" --> E
-    C -- "controls" --> F
-    E -- "interfaces" --> H
-    F -- "interfaces" --> I
-    H --> G
-    I --> G
-```
-
-- **Application Layer**: Manages the user interface (built with LVGL and SquareLine Studio) and the main therapy state machine.
-- **Control & Algorithm Layer**: Implements the core control algorithms (PID) and signal processing (Kalman filter). These are designed as independent modules.
-- **Hardware Abstraction Layer (HAL)**: Provides a standardized interface to the hardware, decoupling the application logic from specific hardware implementations (e.g., `hal_pressure_sensor.c`, `hal_pump.c`).
-- **Hardware**: The physical components of the system.
-
-## Core Features
-
-### Pressure Control System
-
-The core of the device is a closed-loop control system that precisely regulates pressure.
+触摸屏设置目标压力和运行时长，控制任务读取压力、更新滤波状态并计算泵控制量。连续模式保持闭环调节；间歇模式通过工作和休息状态切换控制输出。设置参数通过 NVS 保存，界面提供压力、泵输出和周期进度的显示。
 
 ```mermaid
-graph LR
-    User[User Interface] -->|Set Target| PID
-    PID -->|Calculate Error| Feedback[Pressure Sensor]
-    Feedback -->|Raw Data| Kalman[Kalman Filter]
-    Kalman -->|Filtered Data| PID
-    PID -->|Control Signal| Pump[Pump Driver]
-    Pump -->|Actuation| System
-    System -- Generates Pressure --> Feedback
+flowchart LR
+    UI[触摸设置] --> SP[目标与模式]
+    ADC[ADC 与电压校准] --> P[压力换算]
+    P --> KF[Kalman 滤波]
+    KF --> PID[离散 PID]
+    SP --> PID
+    PID --> PWM[PWM 映射与限幅]
+    PWM --> Plant[泵与台架]
+    Plant --> ADC
+    KF --> Display[LVGL 状态显示]
 ```
 
-1.  **Sensing**: The pressure sensor continuously measures the pressure at the wound site.
-2.  **Filtering**: A Kalman filter is applied to the raw sensor readings to reduce noise and provide a stable pressure value.
-3.  **Control**: A PID (Proportional-Integral-Derivative) controller calculates the required pump speed by comparing the filtered pressure against the target pressure.
-4.  **Actuation**: The pump speed is adjusted via a PWM signal to maintain the desired pressure.
+### 压力测量与滤波
 
-### Therapy Modes
+压力读数先经过 ADC 电压校准，再按传感器零点与比例系数换算为相对压力。标量 Kalman 滤波使用过程噪声和测量噪声参数控制估计的更新幅度，为控制器提供平滑后的反馈量。
 
-The controller supports two standard therapy modes.
+当前测量接口与运行状态均使用整数 kPa，滤波内部采用浮点数。量化位置、噪声参数与动态响应之间的关系见[压力估计](docs/architecture.md#压力估计)。
 
-```mermaid
-graph TB
-    subgraph "Continuous Mode"
-        A1[Start] --> A2[Maintain Target Pressure] --> A3[Stop]
-    end
-    
-    subgraph "Intermittent Mode"
-        B1[Start] --> B2[Work Phase]
-        B2 --> B3[Rest Phase]
-        B3 --> B2
-        B2 --> B4[Stop]
-    end
+### 离散 PID 与执行器映射
+
+PID 使用实际调用间隔计算积分和差分项，通过积分限幅约束累积误差，再对输出执行饱和处理。泵控制层将输出映射到 PCA9685 的 12 位计数范围；压力符号、控制误差与驱动极性需要联合核对。
+
+计算公式、输出约束及其参数含义见[反馈控制](docs/architecture.md#反馈控制)。
+
+### 运行模式与异常条件
+
+控制状态包括空闲、工作和休息。间歇模式使用秒级计时器管理周期，在新工作周期重置 PID 的积分和历史误差。异常处理采用条件阈值与持续时间判断，并在界面显示相应状态。
+
+控制节拍、异常检测的调用位置和状态切换细节见[任务与状态](docs/architecture.md#任务与状态)。
+
+## 构建入口
+
+```sh
+git clone --branch npwt-features https://github.com/Owen1B/PressureCare.git
+cd PressureCare
 ```
-- **Continuous Mode**: A constant negative pressure is applied for the duration of the therapy. This is typically used for wounds with high levels of exudate.
-- **Intermittent Mode**: The system cycles between a set negative pressure (work time) and atmospheric pressure (rest time). This can help stimulate blood flow and granulation tissue formation.
 
-## Hardware Specifications
+组件清单要求 ESP-IDF 5.1.0 及以上、LVGL `>8.3.9,<9`，并依赖配套的 LCD 与触摸配置。当前 CMake 源文件列表和部分 UI 调用接口需要先与控制模块对齐；配置、构建及台架准备步骤见[构建说明](docs/build.md)。
 
-### System Components
+## 代码导航
 
-| Component           | Model/Type             | Interface | Purpose                               |
-| ------------------- | ---------------------- | --------- | ------------------------------------- |
-| **MCU**             | ESP32-S3               | -         | Main application and control processor|
-| **Display**         | Waveshare 4.3"         | RGB       | 800x480 TFT LCD for UI                |
-| **Touch Controller**| GT911                  | I2C       | Capacitive touch input                |
-| **Pump Driver**     | PCA9685                | I2C       | External 12-bit PWM controller        |
-| **Pressure Sensor** | Analog                 | ADC       | Measures sub-atmospheric pressure     |
+| 路径 | 内容 |
+| --- | --- |
+| [`main/algorithms/`](main/algorithms/) | PID 与标量 Kalman 滤波。 |
+| [`main/hal/`](main/hal/) | ADC 压力读取、PCA9685 通信及 PWM 输出。 |
+| [`main/npwt_logic.c`](main/npwt_logic.c) | 控制任务、连续/间歇模式与周期计时。 |
+| [`main/npwt_core.c`](main/npwt_core.c) | 共享状态、设置接口与 NVS 存储。 |
+| [`main/npwt_ui_bridge.c`](main/npwt_ui_bridge.c) | UI 数据桥接、异常条件与交互状态。 |
+| [`main/app_config.h`](main/app_config.h) | 引脚、标定系数、滤波与控制参数。 |
+| [`docs/images/`](docs/images/) | 原型照片和界面截图。 |
 
-### Key Parameters & Pinout
+## 使用范围与资料
 
-The following parameters are centralized in `main/app_config.h` for easy configuration.
+本项目用于台架实验和嵌入式控制研究，禁止接入人体或用于临床治疗。演示材料记录原型效果；控制精度、超调、异常响应和长期稳定性应通过独立台架测量确认，具体项目见[验证说明](docs/validation.md)。
 
-| Module          | Parameter                 | Value                  |
-| --------------- | ------------------------- | ---------------------- |
-| **PID**         | Kp, Ki, Kd                | `20.0`, `2.0`, `1.0`   |
-| **Kalman Filter** | Q (Process Noise)         | `0.01`                 |
-| **Kalman Filter** | R (Measurement Noise)     | `0.1`                  |
-| **I2C Bus**     | SDA, SCL                  | `GPIO 8`, `GPIO 9`     |
-| **ADC**         | Channel                   | `ADC1_CHANNEL_5`       |
-
-## Building and Running the Project
-
-This project is built using the ESP-IDF (Espressif IoT Development Framework).
-
-### Prerequisites
-
-- ESP-IDF `v5.0` or later.
-- A compatible ESP32-S3 development board (e.g., ESP32-S3-DevKitC-1).
-- The hardware components listed above.
-
-### Build Steps
-
-1.  **Clone the repository:**
-    ```bash
-    git clone [repository-url]
-    cd PressureCare
-    ```
-
-2.  **Set up ESP-IDF environment:**
-    Follow the official ESP-IDF installation guide.
-
-3.  **Connect the device** and ensure it is detected by your system.
-
-4.  **Configure the project:**
-    ```bash
-    idf.py menuconfig
-    ```
-    *(No specific configuration is required for the base project, but you can customize settings here.)*
-
-5.  **Build and flash:**
-    ```bash
-    idf.py build flash monitor
-    ```
-
-This will compile the project, flash it to the ESP32-S3, and open a serial monitor to view logs.
-
-## License
-
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+[算法与系统设计](docs/architecture.md) · [构建说明](docs/build.md) · [验证说明](docs/validation.md) · [作者与依赖](docs/attribution.md) · [LICENSE](LICENSE)
